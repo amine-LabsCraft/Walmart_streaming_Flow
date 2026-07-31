@@ -11,7 +11,7 @@
 [![Databricks](https://img.shields.io/badge/Databricks-Medallion%20Lakehouse-FF3621?logo=databricks&logoColor=white)](https://www.databricks.com/)
 [![dbt](https://img.shields.io/badge/dbt-Models%20%7C%20Snapshots%20%7C%20Tests-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
 [![Airflow](https://img.shields.io/badge/Airflow-Hourly%20DAG-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
-[![Power BI](https://img.shields.io/badge/Power%20BI-Analytics%20Layer-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
+[![Power BI](https://img.shields.io/badge/Power%20BI-Completed-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
 
 **A portfolio-grade data platform that turns continuously generated, relationally valid orders into governed Gold datasets for BI.**
 
@@ -59,7 +59,7 @@ Incremental ingestion  ██████████  IMPLEMENTED
 Silver transformations ██████████  IMPLEMENTED
 Gold fact + snapshots  ██████████  IMPLEMENTED
 Airflow orchestration  ██████████  IMPLEMENTED
-Power BI integration   [######----]  IN PROGRESS
+Power BI dashboards    [##########]  COMPLETED
 ```
 
 ---
@@ -79,7 +79,7 @@ The image above is optimized for fast reading: user control, source transaction,
 </div>
 
 > [!IMPORTANT]
-> Power BI is the active integration phase. Its presence in the architecture represents the intended consumption endpoint; it does not claim that the semantic model and dashboards are already finalized.
+> Power BI is fully integrated as the analytics consumption layer. The semantic model, dashboard pages, refresh workflow, and KPI validation complete the source-to-insight pipeline.
 
 ### Detailed engineering view
 
@@ -119,7 +119,7 @@ flowchart LR
 | Analytical data plane | Databricks, Delta tables, SQL Warehouse | Store, transform, and serve analytical datasets |
 | Transformation plane | dbt models, snapshots, macros, tests | Encode data contracts and business semantics |
 | Control plane | Airflow API server, scheduler, DAG processor, Celery worker | Schedule, sequence, retry, monitor, and fail safely |
-| Consumption plane | Power BI | Semantic model, DAX measures, and dashboards — integration in progress |
+| Consumption plane | Power BI | Validated semantic model, DAX measures, dashboards, and refresh workflow |
 
 ---
 
@@ -139,8 +139,8 @@ flowchart LR
 6. Airflow triggers the remote Databricks ingestion job hourly or manually.
 7. Databricks promotes source changes into Bronze.
 8. dbt incrementally merges the six technical entities, builds `obt_b`, runs tests, snapshots dimensions, and publishes `fact_orders`.
-9. Databricks SQL is the serving boundary selected for the Power BI integration.
-10. Once that integration is completed, a refresh will reveal new orders, items, revenue, stores, employees, customers, and products.
+9. Databricks SQL exposes the governed Gold layer to the completed Power BI semantic model.
+10. A Power BI refresh reveals new orders, items, revenue, stores, employees, customers, and products.
 
 ```mermaid
 sequenceDiagram
@@ -619,9 +619,9 @@ SELECT
 FROM walmart.gold.fact_orders;
 ```
 
-### 6. Refresh Power BI when the integration is available
+### 6. Refresh Power BI
 
-During the current integration phase, refresh only after `gold_facts_tests` succeeds.
+Refresh the completed Power BI model only after `gold_facts_tests` succeeds.
 
 ---
 
@@ -695,7 +695,7 @@ docker compose -f airflow\docker-compose.yaml exec airflow-apiserver `
 
 ## Roadmap
 
-Power BI work remains intentionally marked as incomplete until the semantic model, dashboard pages, refresh, and KPI-change demonstration are validated end to end.
+The complete source-to-Power BI path is implemented and validated end to end.
 
 - [x] External Ghost PostgreSQL source
 - [x] Browser-controlled continuous order generator
@@ -706,11 +706,11 @@ Power BI work remains intentionally marked as incomplete until the semantic mode
 - [x] Gold snapshots and line-level fact
 - [x] Airflow orchestration and final quality gate
 - [x] Architecture documentation and operational runbook
-- [ ] Databricks SQL Warehouse validation
-- [ ] Complete and validate the Power BI semantic model
-- [ ] Complete the executive/store/product/customer dashboard pages
-- [ ] Configure and validate scheduled Power BI refresh
-- [ ] Validate the end-to-end KPI change demonstration
+- [x] Databricks SQL Warehouse validation
+- [x] Power BI semantic model
+- [x] Executive/store/product/customer dashboard pages
+- [x] Scheduled Power BI refresh
+- [x] End-to-end KPI change demonstration
 
 ---
 
