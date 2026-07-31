@@ -1,569 +1,483 @@
 <div align="center">
 
-# 🛒 Walmart End-to-End Analytics & Lakehouse Pipeline
+# Walmart Streaming Flow
 
-### Production-Inspired Retail Data Engineering Platform
+### From continuous retail orders to an analytics-ready Databricks star schema
 
-**PostgreSQL • CDC • Databricks • Delta Lake • dbt • Apache Airflow**
+**Ghost PostgreSQL · Python · CDC · Databricks · Delta Lake · dbt · Apache Airflow · Power BI**
 
-[![Databricks](https://img.shields.io/badge/Databricks-Lakehouse-FF3621?logo=databricks&logoColor=white)](https://www.databricks.com/)
-[![Apache Spark](https://img.shields.io/badge/Apache%20Spark-Distributed%20Processing-E25A1C?logo=apachespark&logoColor=white)](https://spark.apache.org/)
-[![Delta Lake](https://img.shields.io/badge/Delta%20Lake-ACID%20Storage-00ADD8)](https://delta.io/)
-[![dbt](https://img.shields.io/badge/dbt-Analytics%20Engineering-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
-[![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-Orchestration-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-OLTP-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ghost%20OLTP-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Databricks](https://img.shields.io/badge/Databricks-Lakehouse-FF3621?logo=databricks&logoColor=white)](https://www.databricks.com/)
+[![Delta Lake](https://img.shields.io/badge/Delta%20Lake-CDC%20%26%20ACID-00ADD8)](https://delta.io/)
+[![dbt](https://img.shields.io/badge/dbt-Analytics%20Engineering-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![Airflow](https://img.shields.io/badge/Apache%20Airflow-Hourly-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
+[![Power BI](https://img.shields.io/badge/Power%20BI-Next%20Phase-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
 
-*A complete retail data platform that transforms operational transactions into governed, tested, and analytics-ready data products.*
+A production-minded retail data engineering project that continuously creates coherent orders in an external PostgreSQL database, captures only source changes, and promotes them through Bronze, Silver, and Gold for business intelligence.
+
+[Architecture](#architecture) · [Pipeline](#end-to-end-pipeline) · [Data model](#gold-analytics-model) · [Run locally](#run-locally) · [Roadmap](#project-status-and-roadmap)
 
 </div>
-
----
-
-## 📌 Executive Summary
-
-**Walmart End-to-End Analytics & Lakehouse Pipeline** is an enterprise-style data engineering project that reproduces the essential components of a modern retail analytics platform.
-
-Operational data starts in PostgreSQL. New and modified records are captured incrementally, processed on Databricks with Apache Spark, stored in Delta Lake, transformed and tested with dbt, and orchestrated with Apache Airflow. The Gold layer exposes a Star Schema designed for business intelligence and analytical reporting.
-
-### What the project delivers
-
-- A PostgreSQL operational source for sales, products, stores, and customers
-- High-performance source loading with Python, `psycopg2`, and PostgreSQL `COPY`
-- Incremental Change Data Capture instead of repeated full reloads
-- A Databricks Medallion architecture with Bronze, Silver, and Gold layers
-- Reliable Delta Lake storage and incremental upserts
-- SCD Type 1 and SCD Type 2 historical processing
-- A Gold Star Schema centered on `fact_sales`
-- Modular transformations, snapshots, tests, documentation, and lineage with dbt
-- Hourly workflow orchestration with Apache Airflow
-- Remote Databricks job execution and monitoring with the Databricks SDK
-- Central governance through Unity Catalog and `walmart_catalog`
-- Secure configuration through environment variables and `.gitignore`
-
-### Business value
-
-| Business need | Engineering response | Result |
-|---|---|---|
-| Reliable retail reporting | Tested facts and conformed dimensions | Consistent revenue, margin, quantity, and profitability indicators |
-| Historical analysis | SCD Type 2 for products and stores | Sales remain connected to the attributes valid at the transaction date |
-| Faster refreshes | Incremental CDC and Delta Lake upserts | Less data movement and shorter processing time |
-| Trusted data | dbt tests, freshness checks, and reconciliation | Defects are detected before Gold publication |
-| Operational resilience | Airflow retries and Databricks run monitoring | Failed stages remain visible and recoverable |
-| Governance | Unity Catalog, lineage, and controlled access | Data products are discoverable, traceable, and protected |
 
 > [!NOTE]
-> This is an educational portfolio project inspired by enterprise retail analytics practices. The project is not affiliated with or endorsed by Walmart Inc.
+> This is an educational portfolio project. It is not affiliated with or endorsed by Walmart Inc.
 
 ---
 
-## 🖼️ End-to-End Platform Architecture
+## Architecture
+
+### Detailed end-to-end view
 
 <div align="center">
-  <img src="./Docs/E2E.png" alt="Walmart end-to-end analytics and lakehouse architecture" width="100%">
+  <img src="./Docs/architecture/walmart-streaming-flow-end-to-end.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
   <br>
-  <sub><b>Figure 1.</b> Complete data journey from PostgreSQL to Databricks, dbt, Airflow, and analytical consumption.</sub>
+  <sub><b>Figure 1.</b> Continuous order generation, incremental CDC, Databricks Medallion processing, dbt quality gates, Airflow orchestration, and Power BI consumption.</sub>
 </div>
 
-### Architecture explained
+### General platform view
 
-1. **PostgreSQL stores operational data.** The source system contains sales, products, stores, and customers.
-2. **Ghost MCP provides agentic access.** VS Code can interact with PostgreSQL through controlled natural-language requests.
-3. **CDC captures changes.** Only new and modified records are transferred to the analytical platform.
-4. **Bronze preserves raw data.** Source-aligned records are stored with ingestion and lineage metadata.
-5. **Silver creates trusted entities.** Records are typed, cleaned, deduplicated, validated, and historized.
-6. **Gold publishes analytical models.** Dimensions and facts expose stable business definitions.
-7. **dbt manages transformation quality.** Models, snapshots, tests, documentation, and lineage are version controlled.
-8. **Airflow controls execution.** Tasks run in dependency order and remote Databricks jobs are monitored.
-9. **Business users consume certified datasets.** Gold models support dashboards, reports, and advanced analytics.
+<div align="center">
+  <img src="./Docs/architecture/walmart-streaming-flow-general-view.png" alt="General Walmart Streaming Flow architecture" width="100%">
+  <br>
+  <sub><b>Figure 2.</b> Simplified source-to-dashboard data journey.</sub>
+</div>
 
 ---
 
-## 🧭 Conceptual Platform View
+## Why this project exists
 
-<div align="center">
-  <img src="./Docs/architecture.png" alt="Conceptual Walmart data platform architecture" width="100%">
-  <br>
-  <sub><b>Figure 2.</b> Conceptual view of agentic access, incremental ingestion, Databricks processing, dbt, and Airflow.</sub>
-</div>
+Traditional demo pipelines often load a static CSV once. Walmart Streaming Flow models a more realistic operational lifecycle:
 
-### Main responsibilities
+- a browser-controlled generator creates new transactions continuously;
+- every generated order respects the existing PostgreSQL business relationships;
+- source rows receive a monotonic `change_version` on every insert or update;
+- Databricks ingests only changes instead of performing repeated full reloads;
+- dbt promotes data through incremental Silver models, a conformed business table, historical snapshots, and a Gold fact;
+- Apache Airflow runs the unchanged analytical pipeline every hour;
+- Power BI will consume the Gold layer through Databricks SQL.
 
-| Area | Responsibility |
+The generator is continuous; the analytical refresh remains deliberately hourly. This separates operational event production from governed batch analytics.
+
+---
+
+## End-to-end pipeline
+
+```text
+Order Pulse web page
+        │
+        ▼
+Python order generator ── atomic transaction ──► Ghost PostgreSQL / raw
+                                                    │
+                                                    │ change_version
+                                                    ▼
+                                          Databricks CDC job
+                                                    │
+                                                    ▼
+                                      walmart.bronze (6 tables)
+                                                    │
+                                                    ▼
+                                      dbt Silver Technical
+                                                    │
+                                                    ▼
+                                       dbt Silver Business / obt_b
+                                                    │
+                                                    ▼
+                                  dbt snapshots + Gold / fact_orders
+                                                    │
+                                                    ▼
+                                  Databricks SQL Warehouse → Power BI
+
+             Apache Airflow orchestrates the analytical path every hour
+```
+
+### Processing contract
+
+| Stage | Technology | Responsibility | Update pattern |
+|---|---|---|---|
+| Operational source | Ghost PostgreSQL | Authoritative retail entities and transactions | Row-level inserts and updates |
+| Event generation | Flask + Python + `psycopg2` | Create valid orders from existing business entities | One order and 1–5 items per cycle |
+| Change tracking | PostgreSQL trigger + sequence | Assign a strictly increasing CDC cursor | `change_version` on insert/update |
+| Bronze | Databricks + Delta Lake | Preserve source changes for downstream processing | Incremental ingestion |
+| Silver Technical | dbt-databricks | Merge typed source entities by primary key | Incremental `merge` |
+| Silver Business | dbt | Join the six entities into `obt_b` | Rebuilt conformed table |
+| Gold | dbt snapshots + model | Preserve dimension history and publish line-level facts | SCD snapshots + fact build |
+| Orchestration | Apache Airflow 3 + Celery | Schedule, sequence, retry, test, and monitor | Hourly DAG |
+| Consumption | Databricks SQL + Power BI | Semantic model, KPIs, dashboards | Next project phase |
+
+---
+
+## Streaming source and business integrity
+
+### Source entities
+
+The external Ghost PostgreSQL database exposes the `raw` schema:
+
+| Table | Role | Important relationships |
+|---|---|---|
+| `raw.customers` | Existing customer master | Referenced by `orders.customer_id` |
+| `raw.stores` | Active store master | Referenced by orders and employees |
+| `raw.employees` | Store employees | `employees.store_id → stores.store_id` |
+| `raw.products` | Active product catalog and current price | Referenced by order items |
+| `raw.orders` | Order header | Customer, store, employee, timestamps, status, total |
+| `raw.order_items` | Order lines | Order, product, quantity, unit price, line amount |
+
+### Generator guarantees
+
+The generator does not invent disconnected foreign keys:
+
+1. It selects an existing active customer.
+2. It selects an active store that has at least one active employee.
+3. It selects the employee from that same store.
+4. It selects between one and five existing active products with a positive price.
+5. It calculates each `line_amount = quantity × unit_price`.
+6. It calculates the order total from its generated lines.
+7. It inserts the order header and all order items in one PostgreSQL transaction.
+8. It rolls back the entire transaction if any insert fails.
+9. It uses a PostgreSQL advisory lock while allocating identifiers, allowing safe generator restarts.
+10. Random mode varies customers, stores, employees, products, quantities, and payment methods.
+
+The default web interval is **10 seconds** and can be changed between 2 and 3,600 seconds.
+
+### CDC source upgrade
+
+The additive migration in `001_streaming_source_upgrade.sql` preserves existing data while adding:
+
+- `raw.orders.employee_id`;
+- `raw.orders.change_version`;
+- `raw.order_items.change_version`;
+- one shared monotonic PostgreSQL sequence;
+- triggers that assign a new cursor value on every insert or update;
+- a foreign key from an order to the employee who handled it.
+
+This gives the Databricks connector a reliable cursor for both newly inserted and modified rows.
+
+---
+
+## Databricks Medallion architecture
+
+The analytical objects live under the Databricks catalog `walmart`.
+
+### Bronze — source-aligned
+
+dbt declares the six upstream Bronze tables:
+
+```text
+walmart.bronze.orders
+walmart.bronze.order_items
+walmart.bronze.customers
+walmart.bronze.products
+walmart.bronze.stores
+walmart.bronze.employees
+```
+
+Bronze is the boundary between source ingestion and analytical transformation. The remote Databricks job, triggered by Airflow, is responsible for capturing source changes.
+
+### Silver Technical — incremental entities
+
+Each technical model is materialized incrementally and uses a business primary key with Databricks `merge`:
+
+| Model | Unique key | Incremental cursor |
+|---|---|---|
+| `orders_t` | `order_id` | `change_version` |
+| `order_items_t` | `order_item_id` | `change_version` |
+| `customers_t` | `customer_id` | Source change version |
+| `products_t` | `product_id` | Source change version |
+| `stores_t` | `store_id` | Source change version |
+| `employees_t` | `employee_id` | Source change version |
+
+Every model also records `processed_at` for operational traceability.
+
+### Silver Business — one big table
+
+`obt_b` joins:
+
+```text
+orders_t
+  ├── customers_t
+  ├── order_items_t
+  │     └── products_t
+  ├── employees_t
+  └── stores_t
+```
+
+The resulting business dataset contains the order, line, customer, product, employee, and store context needed by both Gold snapshots and facts.
+
+### Gold — historical dimensions and facts
+
+dbt snapshots use the timestamp strategy and an open-ended current date of `9999-12-31`:
+
+- `dim_customers`
+- `dim_products`
+- `dim_stores`
+- `dim_employees`
+- `dim_orders`
+
+`fact_orders` is the central analytical fact table.
+
+---
+
+## Gold analytics model
+
+### Fact grain
+
+> **One row per order item (`order_item_id`).**
+
+This grain matters in Power BI:
+
+- `sales_amount` and `line_amount` are additive across fact rows;
+- `quantity` is additive;
+- `order_total_amount` is repeated for every item in an order and **must not be summed**;
+- total orders must use `DISTINCTCOUNT(order_id)`;
+- average order value must be computed from one value per order.
+
+### Fact columns
+
+| Category | Columns |
 |---|---|
-| **Agentic database** | Supports controlled natural-language exploration of PostgreSQL |
-| **Incremental ingestion** | Transfers only new or modified source records |
-| **Databricks processing** | Executes distributed transformations and stores Delta tables |
-| **dbt transformation** | Converts technical datasets into documented analytical models |
-| **Quality checks** | Prevents invalid, stale, duplicated, or inconsistent data from reaching Gold |
-| **Airflow orchestration** | Coordinates dependencies, retries, monitoring, and final pipeline status |
+| Keys | `order_id`, `order_item_id`, `product_id`, `store_id`, `employee_id`, `customer_id`, `date_key` |
+| Time | `order_date`, `order_timestamp` |
+| Descriptors | `payment_method`, `order_status` |
+| Measures | `quantity`, `unit_price`, `sales_amount`, `line_amount`, `order_total_amount` |
+| Operations | `order_is_active`, `order_item_is_active`, `processed_at` |
+
+### Recommended Power BI measures
+
+```DAX
+Revenue =
+SUM ( fact_orders[sales_amount] )
+
+Orders =
+DISTINCTCOUNT ( fact_orders[order_id] )
+
+Items Sold =
+SUM ( fact_orders[quantity] )
+
+Average Order Value =
+DIVIDE ( [Revenue], [Orders] )
+
+Average Item Price =
+DIVIDE ( [Revenue], [Items Sold] )
+```
 
 > [!IMPORTANT]
-> If the conceptual image contains an AWS S3 block, that block represents an optional file-ingestion extension. The implemented core pipeline uses PostgreSQL as the operational source and Databricks Delta Lake as the analytical storage platform.
+> Do not create `Total Sales = SUM(fact_orders[order_total_amount])`; the header total repeats once per order item and would overstate revenue.
+
+### Dashboard-ready questions
+
+- How does revenue evolve by date and hour?
+- Which stores and employees process the most orders?
+- Which products, categories, and brands generate the most revenue?
+- Which customers have the highest order frequency and value?
+- How does payment-method usage vary by store?
+- What changed after the most recent hourly pipeline execution?
 
 ---
 
-## 🗄️ Source System and Agentic Access
+## dbt transformation and quality
 
-### PostgreSQL OLTP
+The project separates technical processing, business conformance, and Gold publication.
 
-PostgreSQL represents the operational retail database and remains the authoritative source of transactional data.
+```text
+sources
+  └── silver_t (incremental)
+        └── silver_b / obt_b
+              ├── gold/ephemeral
+              ├── snapshots / dimensions
+              └── gold/fact / fact_orders
+```
 
-| Source table | Responsibility |
-|---|---|
-| `sales` | Stores transaction time, quantity, price, cost, discount, and payment method |
-| `products` | Describes products, categories, brands, and list prices |
-| `stores` | Describes store names, addresses, cities, and regions |
-| `customers` | Describes customer profiles and loyalty attributes |
+Quality controls include:
 
-The Lakehouse does not replace PostgreSQL. It receives operational changes and reorganizes the data for analytical use.
+- primary-key uniqueness and non-null checks;
+- positive identifiers, quantities, prices, salaries, and sales amounts;
+- accepted values for activity flags;
+- relationships between orders, customers, stores, employees, items, and products;
+- verification that an order employee belongs to the selected store;
+- reconciliation of `MAX(order_total_amount)` with the sum of line-level `sales_amount`;
+- source freshness before transformation;
+- a final Gold fact test gate.
 
-### Ghost MCP and VS Code
-
-Ghost MCP connects VS Code to PostgreSQL through the Model Context Protocol. It supports schema discovery, assisted SQL exploration, relationship analysis, development, and debugging.
-
-The agentic interface complements the engineering workflow but does not replace deterministic pipelines, dbt models, tests, permissions, or code review. Credentials remain outside the source code.
-
----
-
-## 🚀 Ingestion and Change Data Capture
-
-### High-performance source loading
-
-Python and `psycopg2` are used to communicate with PostgreSQL. Large volumes are loaded with PostgreSQL `COPY` through `cursor.copy_expert`, avoiding slow row-by-row inserts.
-
-### Incremental CDC
-
-The pipeline processes new and updated records instead of rebuilding every dataset during each execution.
-
-**Benefits:**
-
-- Less data transferred from PostgreSQL
-- Faster Databricks processing
-- Lower compute consumption
-- Better scalability as the source grows
-- Clear tracking of modified business entities
-- Safer retries through idempotent processing
-
-Source timestamps and ingestion metadata determine change order. Checksums help identify material changes and avoid unnecessary updates.
+Failed critical tests stop downstream publication in Airflow.
 
 ---
 
-## 🥉🥈🥇 Medallion Lakehouse Architecture
+## Apache Airflow orchestration
 
-The Lakehouse is governed under Unity Catalog through:
+The `orchestrate` DAG runs **hourly**, disables catch-up, and limits processing to the explicit dependency chain below:
 
-- `walmart_catalog.bronze`
-- `walmart_catalog.silver`
-- `walmart_catalog.gold`
-
-Each layer has one clear responsibility.
-
-### 🥉 Bronze: Raw, Traceable, Replayable
-
-Bronze is the immutable landing layer. It stores source-aligned Delta records before business transformation.
-
-**Main responsibilities:**
-
-- Append-only ingestion
-- Preservation of original source values
-- Raw Delta table storage
-- Batch and source traceability
-- Checksum-based change identification
-- Replay support after downstream failures
-- Separation between ingestion and business logic
-
-**Audit metadata:**
-
-| Metadata | Purpose |
-|---|---|
-| `_ingested_at` | Time at which the record entered the Lakehouse |
-| `_source_file` | Source file, batch, or logical ingestion reference |
-| `_checksum` | Material-change detection across tracked attributes |
-| `_batch_id` | Correlation with Airflow and Databricks executions |
-| `_source_system` | Identification of PostgreSQL as the source system |
-
-Bronze does not calculate business metrics. Its role is to protect traceability, replayability, and auditability.
-
-### 🥈 Silver Technical: Clean and Standardized
-
-Silver Technical transforms raw values into dependable technical records.
-
-**Implemented processing:**
-
-- Strict type conversion
-- Timestamp normalization
-- Text trimming and case standardization
-- Null normalization
-- Duplicate detection
-- Deterministic record selection
-- Invalid-value filtering
-- Rejected-record quarantine
-- CDC upserts with Delta Lake
-
-A sales record is rejected when essential rules fail, for example a missing identifier, non-positive quantity, negative price, negative cost, or unsupported payment method.
-
-### 🥈 Silver Business: Conformed and Historical
-
-Silver Business applies retail rules after technical cleaning.
-
-**Implemented processing:**
-
-- Conformed sales, product, store, and customer entities
-- Business-rule validation
-- Current-state customer management
-- Historical product-price management
-- Historical store-location management
-- Validity-period control
-- Preparation for dimensional modeling
-
-### Slowly Changing Dimensions
-
-**SCD Type 1** keeps the latest corrected state when previous values are not required analytically. Customer corrections overwrite the prior value while retaining the same business identity.
-
-**SCD Type 2** preserves history when previous values matter. Product prices and store locations receive multiple versions containing:
-
-- A surrogate key
-- A natural business key
-- `valid_from`
-- `valid_to`
-- `is_current`
-- An attribute hash
-- Creation and update timestamps
-
-The model prevents overlapping validity periods and allows only one current version for each natural business key.
-
-### 🥇 Gold: Governed Business Data Products
-
-Gold translates trusted Silver entities into a model optimized for business analysis.
-
-**Main responsibilities:**
-
-- Conformed dimensions
-- Central sales fact table
-- Stable metric definitions
-- Historical dimension resolution
-- Business-friendly naming
-- Analytical relationships
-- Certified data products for BI and reporting
-
----
-
-## ⭐ Gold Star Schema
-
-<div align="center">
-  <img src="./Docs/schema.png" alt="Walmart Gold Star Schema" width="100%">
-  <br>
-  <sub><b>Figure 3.</b> Overview of the Gold Star Schema centered on the sales fact table.</sub>
-</div>
-
-<div align="center">
-  <img src="./Docs/walmart-star-schema-design.png" alt="Detailed Walmart Star Schema design" width="85%">
-  <br>
-  <sub><b>Figure 4.</b> Detailed dimensional design, SCD strategy, metrics, quality rules, and analytical capabilities.</sub>
-</div>
-
-### Fact-table grain
-
-The grain of `fact_sales` is:
-
-> **One row per unique completed sale identified by `sale_id`.**
-
-This fixed grain prevents mixed levels of detail, duplicate totals, and inconsistent calculations.
-
-### Central fact: `fact_sales`
-
-| Element | Meaning |
-|---|---|
-| `sale_id` | Transaction identifier and degenerate dimension |
-| `product_key` | Surrogate key of the product version valid at the sale time |
-| `store_key` | Surrogate key of the store version valid at the sale time |
-| `customer_key` | Surrogate key of the customer dimension |
-| `date_key` | Surrogate key of the calendar dimension |
-| `payment_method` | Descriptive transaction attribute |
-| `quantity` | Number of units sold |
-| `gross_sales_amount` | Sales value before discount |
-| `discount_amount` | Reduction applied to the transaction |
-| `net_revenue_amount` | Revenue after discount |
-| `cost_amount` | Extended merchandise cost |
-| `gross_margin_amount` | Net revenue minus cost |
-| `profit_rate` | Gross margin relative to net revenue |
-
-Financial values use fixed-precision decimal types. Division by zero is prevented when calculating `profit_rate`.
-
-### Dimensions
-
-#### `dim_products`
-
-Describes product name, category, brand, and list price. SCD Type 2 preserves historical price and tracked business changes.
-
-#### `dim_stores`
-
-Describes store name, address, city, and region. SCD Type 2 ensures that a store relocation does not rewrite the context of previous sales.
-
-#### `dim_customers`
-
-Describes customer profile, loyalty tier, city, and region. SCD Type 1 retains the latest corrected customer state.
-
-#### `dim_date`
-
-Provides reusable calendar attributes such as full date, day, week, month, quarter, year, day name, and weekend indicator.
-
-### Historical dimension resolution
-
-Product and store dimensions are joined using the version valid at `sale_timestamp`, not automatically through the latest current record. If no valid dimension is found, the fact uses an **Unknown member** with surrogate key `-1`.
-
-### Certified metrics
-
-| Metric | Definition |
-|---|---|
-| **Gross sales** | Quantity multiplied by unit price before discount |
-| **Net revenue** | Gross sales minus discount amount |
-| **Cost amount** | Quantity multiplied by unit cost |
-| **Gross margin** | Net revenue minus cost amount |
-| **Profit rate** | Gross margin divided by net revenue |
-
-Quantity and monetary amounts are additive. `profit_rate` is non-additive and must be recalculated from aggregated margin and revenue.
-
----
-
-## 🧩 dbt Analytics Engineering
-
-The dbt project separates transformation logic into clear and testable stages.
-
-| dbt capability | Role in the project |
-|---|---|
-| **Sources** | Declare upstream datasets and freshness expectations |
-| **Staging models** | Rename, type, and standardize source fields |
-| **Silver Technical models** | Apply cleaning and technical validation |
-| **Silver Business models** | Apply retail rules and historical logic |
-| **Ephemeral models** | Reuse logic without creating unnecessary physical tables |
-| **Snapshots** | Preserve selected historical dimension changes |
-| **Gold dimensions** | Build product, store, customer, and date perspectives |
-| **Gold fact** | Publish the final transaction-level sales model |
-| **Macros** | Centralize reusable calculations and rules |
-| **Tests** | Block publication when critical assumptions fail |
-| **Documentation** | Describe models, columns, dependencies, and lineage |
-
-This structure separates source cleaning, business transformation, and analytical presentation.
-
----
-
-## 🎛️ Apache Airflow Orchestration
-
-<div align="center">
-  <img src="./Docs/pepline.png" alt="Apache Airflow DAG workflow" width="100%">
-  <br>
-  <sub><b>Figure 5.</b> Successful hourly Airflow execution from CDC ingestion to Gold fact publication.</sub>
-</div>
-
-### Workflow policy
-
-- Schedule: hourly
-- Historical catch-up: disabled
-- Automatic retries: three
-- Concurrent DAG runs: limited to one
-- Databricks jobs: submitted and monitored remotely
-- Failure behavior: downstream publication stops after a required task fails
-
-### Exact task sequence
-
-| Order | Task | Responsibility |
+| Order | Airflow task | Action |
 |---:|---|---|
-| 1 | `ingest_cdc` | Triggers the Databricks CDC job and waits for the final status |
-| 2 | `clean_target` | Removes previous dbt target artifacts and logs |
-| 3 | `source_freshness` | Verifies that upstream data is recent enough |
-| 4 | `silver_technical` | Builds standardized technical Silver models |
-| 5 | `silver_technical_tests` | Validates technical Silver outputs |
-| 6 | `silver_business` | Builds conformed entities and historical business logic |
-| 7 | `silver_business_tests` | Validates business rules and relationships |
-| 8 | `gold_ephemeral` | Prepares reusable logic required by Gold models |
-| 9 | `gold_dimensions` | Builds or snapshots analytical dimensions |
-| 10 | `gold_facts` | Publishes the final `fact_sales` model |
+| 1 | `ingest_cdc` | Trigger the remote Databricks CDC job and wait for success |
+| 2 | `clean_target` | Remove generated dbt `target` and `logs` artifacts |
+| 3 | `source_freshness` | Check upstream freshness |
+| 4 | `silver_technical` | Run incremental Silver Technical models |
+| 5 | `silver_technical_tests` | Test the technical entities |
+| 6 | `silver_business` | Build the conformed `obt_b` table |
+| 7 | `silver_business_tests` | Validate business relationships |
+| 8 | `gold_ephemeral` | Compile reusable Gold logic |
+| 9 | `gold_dimensions` | Run dbt snapshots |
+| 10 | `gold_facts` | Build `fact_orders` |
+| 11 | `gold_facts_tests` | Run the final Gold quality gate |
 
-### Databricks SDK integration
+Airflow is the control plane; Databricks remains the compute plane. The DAG submits the configured Databricks job, polls its lifecycle state, and fails immediately when the remote result is unsuccessful.
 
-Airflow acts as the control plane and Databricks acts as the compute plane. The DAG submits the configured Databricks job, captures the run identifier, polls its lifecycle state, waits for termination, and fails the Airflow task when the remote run is unsuccessful.
+### Local orchestration stack
 
-This keeps distributed processing inside Databricks rather than on the Airflow scheduler.
+Docker Compose runs:
+
+- Airflow API server;
+- scheduler;
+- DAG processor;
+- Celery worker;
+- Redis broker;
+- PostgreSQL metadata database.
+
+Airflow UI: [http://localhost:8080](http://localhost:8080)
 
 ---
 
-## 🛡️ Data Quality and Governance
+## Run locally
 
-### Quality controls
+### Prerequisites
 
-| Control | Risk prevented |
+- Python 3.11–3.13
+- `uv`
+- Docker Desktop
+- access to the external Ghost PostgreSQL database
+- a Databricks workspace, job, and SQL Warehouse
+
+### 1. Clone
+
+```bash
+git clone https://github.com/amine-LabsCraft/Walmart_streaming_Flow.git
+cd Walmart_streaming_Flow
+```
+
+### 2. Configure secrets locally
+
+Create local `.env` files from the provided examples and supply values without committing them:
+
+```dotenv
+POSTGRES_CONNECTION=postgresql://...
+GHOST_API_KEY=...
+DATABRICKS_HOST=https://...
+DATABRICKS_TOKEN=...
+DATABRICKS_HTTP_PATH=...
+DATABRICKS_JOB_ID=...
+```
+
+### 3. Start Order Pulse
+
+```powershell
+cd "Walmart Data Engineering\Walmart dataset"
+python -m pip install -r web_requirements.txt
+python generator_web_app.py
+```
+
+Open [http://localhost:5050](http://localhost:5050), select random or fixed-customer mode, choose the interval, and press **Start**.
+
+### 4. Start Airflow
+
+```powershell
+cd airflow
+docker compose up -d --build
+```
+
+### 5. Validate dbt
+
+```powershell
+docker exec airflow-airflow-worker-1 dbt parse `
+  --project-dir /opt/airflow/walmart_dbt `
+  --profiles-dir /opt/airflow/walmart_dbt
+```
+
+Enable or trigger the `orchestrate` DAG from Airflow and monitor the remote Databricks run.
+
+---
+
+## Repository structure
+
+```text
+Walmart Streaming Flow/
+├── Docs/
+│   └── architecture/                   # Current README architecture images
+├── Walmart Data Engineering/
+│   ├── deploy_raw_schema.py
+│   └── Walmart dataset/
+│       ├── continuous_order_generator.py
+│       ├── generator_web_app.py
+│       ├── data/                       # Original reference CSV datasets
+│       ├── ddl/                        # Source schema and CDC upgrade
+│       ├── static/                     # Order Pulse JavaScript and CSS
+│       └── templates/                  # Order Pulse HTML
+├── airflow/
+│   ├── dags/orchestration.py           # Hourly orchestration DAG
+│   ├── docker-compose.yaml             # Local Airflow/Celery stack
+│   ├── Dockerfile
+│   └── walmart_dbt/
+│       ├── models/
+│       │   ├── sources/
+│       │   ├── silver_t/
+│       │   ├── silver_b/
+│       │   └── gold/
+│       ├── snapshots/
+│       ├── macros/
+│       ├── tests/
+│       └── tools/
+├── pyproject.toml
+└── uv.lock
+```
+
+---
+
+## Project status and roadmap
+
+| Phase | Status |
 |---|---|
-| **Unique** | Duplicate business or surrogate keys |
-| **Not null** | Missing identifiers and required measures |
-| **Relationships** | Orphan facts with invalid dimension keys |
-| **Accepted values** | Unsupported payment methods or business values |
-| **Source freshness** | Processing stale source data |
-| **Financial reconciliation** | Differences between Silver and Gold totals |
-| **Current-record check** | Multiple active SCD versions for one business key |
-| **Validity-overlap check** | Ambiguous SCD Type 2 history |
-| **Non-negative measures** | Invalid quantities, prices, costs, or discounts |
+| External Ghost PostgreSQL source | ✅ Ready |
+| Relational dataset and CDC source upgrade | ✅ Ready |
+| Browser-controlled continuous generator | ✅ Ready |
+| Coherent multi-entity order generation | ✅ Ready |
+| Incremental Databricks Bronze ingestion | ✅ Implemented |
+| dbt Silver Technical and Business layers | ✅ Implemented |
+| Gold snapshots and `fact_orders` | ✅ Implemented |
+| Hourly Airflow orchestration and tests | ✅ Implemented |
+| Databricks SQL Warehouse validation | 🔄 Next validation |
+| Power BI semantic model and dashboards | 🔜 Next phase |
 
-Critical failures block Gold publication. Invalid source records are quarantined with a clear reason instead of being silently discarded.
+### Next phase: Databricks → Power BI
 
-### Unity Catalog governance
-
-Unity Catalog provides the central governance boundary for `walmart_catalog`.
-
-- Bronze, Silver, and Gold are isolated into separate schemas
-- Permissions can be assigned by engineering and analytical roles
-- Managed metadata improves discovery
-- Lineage connects upstream data to Gold models
-- Ownership and access are controlled centrally
-- Audit metadata connects records to processing runs
-- Sensitive customer information can be restricted or masked
+1. Validate Gold tables and permissions in Databricks.
+2. Connect Power BI Desktop to the Databricks SQL Warehouse.
+3. Choose Import mode for scheduled snapshots or DirectQuery for fresher exploration.
+4. Build relationships from `fact_orders` to the Gold dimensions.
+5. Add safe DAX measures based on the line-level fact grain.
+6. Build overview, store, product, employee, and customer pages.
+7. Configure refresh and verify that a new generated order changes dashboard KPIs after the hourly run.
 
 ---
 
-## 🔐 Security and Secret Management
+## Security
 
-- Databricks host, token, job identifier, and database credentials are read from environment variables
-- The real `.env` file is excluded through `.gitignore`
-- `.env.example` documents required variables without real secrets
-- Credentials are not hard-coded in the Airflow DAG
-- Logs must not expose tokens, passwords, or customer data
-- Read-only access is preferred for agentic database exploration
-- Production environments should use service identities or managed authentication
+- Real `.env` files, API keys, database passwords, and Databricks tokens must never be committed.
+- Rotate any credential that has been pasted into a chat, issue, screenshot, or terminal recording.
+- Use least-privilege identities for PostgreSQL, Databricks, and BI access.
+- Prefer a Databricks service principal and secret manager for non-local environments.
+- The generator should target a development or demo database, not an uncontrolled production source.
 
 ---
 
-## 📊 Analytical Capabilities
-
-The Gold model supports the principal retail questions expected from the platform:
-
-- Which stores generate the highest revenue and gross margin?
-- Which products and categories provide the strongest profitability?
-- How do sales evolve by day, month, quarter, and year?
-- Which regions perform above or below expectations?
-- How do product-price changes affect demand and margin?
-- Which customers belong to high-value or loyalty segments?
-- Which stores show unusual behavior compared with historical performance?
-- How does payment-method usage vary across stores and periods?
-
-The Star Schema keeps these analyses consistent because every report uses the same conformed dimensions and metric definitions.
-
----
-
-## ⚙️ Performance, Reliability, and Observability
-
-### Performance
-
-- Incremental processing limits unnecessary scans
-- Delta Lake upserts modify only changed entities
-- Small dimensions remain efficient to join with the sales fact
-- Fact access patterns prioritize date, store, and product analysis
-- File compaction limits small-file accumulation
-- Table statistics support query planning
-- A controlled lookback window captures late-arriving events
-
-### Reliability
-
-- Idempotent processing prevents duplicate results after retries
-- Airflow blocks downstream tasks after critical failures
-- Batch identifiers support cross-system traceability
-- Bronze remains available for replay
-- SCD validity rules preserve historical correctness
-- dbt tests prevent uncertified Gold publication
-
-### Observability
-
-A complete run should expose:
-
-- Airflow DAG and task status
-- Databricks job and run identifiers
-- Source watermark range
-- Input, inserted, updated, rejected, and output counts
-- Freshness and quality-test results
-- Processing duration
-- Latest processed event timestamp
-- Sanitized failure messages
-
----
-
-## 🗂️ Repository Organization
-
-| Directory | Responsibility |
-|---|---|
-| `Docs/` | Architecture, Star Schema, and Airflow illustrations used by this README |
-| `dags/` | Airflow workflow and Databricks job orchestration |
-| `dbt_project/` | Sources, models, macros, snapshots, tests, and documentation |
-| `notebooks/` | Databricks ingestion, CDC, SCD, and maintenance workloads |
-| `scripts/` | PostgreSQL seeding and environment utilities |
-| `config/` | Non-secret runtime configuration and data contracts |
-| `sql/` | Source DDL and analytical assets |
-| `tests/` | Python unit and integration validation |
-| `.env.example` | Safe template for required environment variables |
-| `.gitignore` | Excludes secrets, environments, caches, logs, and artifacts |
-| `pyproject.toml` | Defines the Python project and its dependencies |
-| `uv.lock` | Locks reproducible dependency versions |
-
----
-
-## 🚀 Deployment Overview
-
-### Requirements
-
-- Python 3.12 and `uv`
-- PostgreSQL
-- Databricks workspace with Unity Catalog
-- Databricks compute or SQL Warehouse
-- dbt Core with `dbt-databricks`
-- Apache Airflow
-
-### Deployment sequence
-
-1. Clone the repository
-2. Create the local `.env` from `.env.example`
-3. Install locked dependencies with `uv`
-4. Create and seed the PostgreSQL source database
-5. Configure `walmart_catalog` and its Bronze, Silver, and Gold schemas
-6. Validate dbt connectivity and source freshness
-7. Build and test the transformation layers
-8. Start Airflow and enable the `orchestrate` DAG
-9. Monitor the Databricks run and verify Gold outputs
-
----
-
-## ✅ Definition of Done
-
-A pipeline execution is successful when:
-
-- Expected PostgreSQL changes are present in Bronze
-- Bronze records contain the required lineage metadata
-- Silver has no unresolved duplicates
-- Invalid records are quarantined with a reason
-- CDC processing remains idempotent
-- SCD Type 2 validity windows do not overlap
-- Every natural key has at most one current version
-- Gold dimensions and `fact_sales` build successfully
-- All blocking dbt tests pass
-- Silver and Gold financial totals reconcile
-- Every required Airflow task completes successfully
-- Authorized users can query the certified Gold models
-
----
-
-## 👤 Author
+## Author
 
 <div align="center">
 
-### **Amine Ait Ali**
+### Amine Ait Ali
 
-**Data Engineering Student**  
-*Modern Data Stack • Lakehouse Architecture • Analytics Engineering*
+Data Engineering · Lakehouse Architecture · Analytics Engineering
 
-This project demonstrates practical implementation across operational databases, incremental ingestion, distributed processing, Delta Lake, dimensional modeling, automated quality controls, governance, and workflow orchestration.
+**PostgreSQL · Python · Databricks · Delta Lake · dbt · Apache Airflow · Power BI**
 
-**PostgreSQL • Python • Apache Spark • Databricks • Delta Lake • dbt • Apache Airflow**
-
-<br>
-
-### ⭐ Built as a production-minded portfolio project for governed retail analytics
+⭐ If this project helps you, consider starring the repository.
 
 </div>

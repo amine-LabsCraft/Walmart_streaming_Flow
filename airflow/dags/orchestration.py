@@ -157,7 +157,7 @@ def orchestrate():
     gold_ephemeral = BashOperator(
         task_id="gold_ephemeral",
         cwd="/opt/airflow/walmart_dbt",
-        bash_command="dbt run --select gold/ephemeral",
+        bash_command="dbt run --select path:models/gold/ephemeral",
     )
 
     # ============================================================
@@ -177,7 +177,13 @@ def orchestrate():
     gold_facts = BashOperator(
         task_id="gold_facts",
         cwd="/opt/airflow/walmart_dbt",
-        bash_command="dbt run --select gold/fact",
+        bash_command="dbt run --select path:models/gold/fact",
+    )
+
+    gold_facts_tests = BashOperator(
+        task_id="gold_facts_tests",
+        cwd="/opt/airflow/walmart_dbt",
+        bash_command="dbt test --select path:models/gold/fact",
     )
 
     # ============================================================
@@ -195,6 +201,7 @@ def orchestrate():
         >> gold_ephemeral
         >> gold_dimensions
         >> gold_facts
+        >> gold_facts_tests
     )
 
 

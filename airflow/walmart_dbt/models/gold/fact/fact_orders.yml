@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: fact_orders
+    description: >-
+      Table de faits au grain d'une ligne de commande. Utiliser sales_amount
+      pour les mesures additives Power BI; order_total_amount est repete sur
+      chaque ligne et ne doit pas etre additionne.
+    columns:
+      - name: order_item_id
+        data_tests:
+          - not_null
+          - unique
+      - name: order_id
+        data_tests:
+          - not_null
+      - name: customer_id
+        data_tests:
+          - not_null
+      - name: store_id
+        data_tests:
+          - not_null
+      - name: product_id
+        data_tests:
+          - not_null
+      - name: employee_id
+        description: >-
+          Employe ayant traite la commande. NULL pour les commandes historiques
+          creees avant l'ajout de cette relation dans la source.
+      - name: sales_amount
+        data_tests:
+          - not_null
+          - greater_than:
+              arguments:
+                value: 0
+      - name: order_date
+        data_tests:
+          - not_null
+      - name: date_key
+        data_tests:
+          - not_null
+      - name: processed_at

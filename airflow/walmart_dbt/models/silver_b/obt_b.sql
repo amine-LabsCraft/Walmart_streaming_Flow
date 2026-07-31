@@ -1,7 +1,7 @@
 {% set configs =[
 
     {
-        "table": "walmart.silver_t.orders_t",
+        "table": ref("orders_t"),
         "columns":"""o.order_id,
                         o.store_id,
                         o.order_timestamp,
@@ -17,7 +17,7 @@
         "alias": "o"
     },
     {
-        "table": "walmart.silver_t.customers_t",
+        "table": ref("customers_t"),
         "columns":"""    c.customer_id,
                         c.first_name AS customer_first_name,
                         c.last_name AS customer_last_name,
@@ -37,7 +37,7 @@
     },
 
     {
-        "table": "walmart.silver_t.order_items_t",
+        "table": ref("order_items_t"),
         "columns":"""        oi.order_item_id,
                             oi.quantity,
                             oi.unit_price,
@@ -52,7 +52,7 @@
     },
 
     {
-        "table": "walmart.silver_t.products_t",
+        "table": ref("products_t"),
         "columns":"""        p.product_id,
                             p.product_name,
                             p.category,
@@ -69,7 +69,7 @@
 
 
     {
-        "table": "walmart.silver_t.employees_t",
+        "table": ref("employees_t"),
         "columns":"""        e.employee_id,
                                 e.first_name AS employee_first_name,
                                 e.last_name AS employee_last_name,
@@ -82,11 +82,11 @@
                                 e.processed_at AS employee_processed_at
                     """,
         "alias": "e",
-        "join_condition": "o.store_id = e.store_id"
+        "join_condition": "o.employee_id = e.employee_id"
     },
 
     {
-        "table": "walmart.silver_t.stores_t",
+        "table": ref("stores_t"),
         "columns":"""        s.store_name,
                             s.city AS store_city,
                             s.province AS store_province,

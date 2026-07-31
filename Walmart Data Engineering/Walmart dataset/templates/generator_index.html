@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Console locale de génération de commandes vers PostgreSQL Ghost.">
+  <title>Order Pulse · Ghost PostgreSQL</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='generator_styles.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Order Pulse">
+        <span class="brand-mark">OP</span>
+        <span><strong>Order Pulse</strong><small>Ghost PostgreSQL</small></span>
+      </a>
+      <div class="connection-state" id="connection-state">
+        <span class="status-dot"></span>
+        <span id="connection-label">Prêt</span>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="intro">
+        <p class="eyebrow">Source generator · contrôle local</p>
+        <h1>Des commandes<br>qui prennent<br><em>le rythme.</em></h1>
+        <p class="intro-copy">
+          Chaque cycle choisit un client actif et un autre magasin, construit
+          une commande cohérente avec 1 à 5 articles, puis l'écrit directement
+          dans Ghost en une seule transaction.
+        </p>
+      </div>
+
+      <section class="console-card" aria-label="Configuration du générateur">
+        <div class="pulse-zone">
+          <div class="pulse-orbit" id="pulse-orbit">
+            <span id="countdown">10</span><small>secondes</small>
+          </div>
+          <div>
+            <p>Prochaine commande</p>
+            <strong id="mode-title">En attente</strong>
+          </div>
+        </div>
+
+        <form id="generator-form">
+          <fieldset>
+            <legend>Choix du client</legend>
+            <label class="choice">
+              <input type="radio" name="customer_mode" value="random" checked>
+              <span><strong>Client variable</strong><small>Nouveau client actif à chaque commande</small></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="customer_mode" value="fixed">
+              <span><strong>Client fixe</strong><small>Le même client pendant la session</small></span>
+            </label>
+          </fieldset>
+
+          <div class="field-grid">
+            <label>
+              <span>Customer ID</span>
+              <input id="customer-id" type="number" min="1" placeholder="Ex. 42" disabled>
+            </label>
+            <label>
+              <span>Intervalle</span>
+              <div class="unit-input">
+                <input id="interval" type="number" min="2" max="3600" step="1" value="10" required>
+                <small>sec</small>
+              </div>
+            </label>
+          </div>
+
+          <button class="primary-button" id="start-button" type="submit">Démarrer la génération</button>
+        </form>
+        <button class="stop-button" id="stop-button" type="button" disabled>Arrêter</button>
+        <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <section class="metrics" aria-label="Résumé">
+      <article><span>Commandes injectées</span><strong id="orders-count">0</strong></article>
+      <article><span>Client actuel</span><strong id="active-customer">-</strong></article>
+      <article><span>Dernier total</span><strong id="last-total">-</strong></article>
+    </section>
+
+    <section class="activity-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">Flux direct</p><h2>Tickets récents</h2></div>
+        <p>Écriture atomique dans <code>raw.orders</code> et <code>raw.order_items</code></p>
+      </div>
+      <div class="ticket-stack" id="activity-list">
+        <div class="empty-state"><span>?</span><p>Démarrez le générateur pour voir les commandes arriver.</p></div>
+      </div>
+    </section>
+
+    <aside class="schema-note">
+      <strong>Relation employé</strong>
+      <p>L'employé actif est choisi dans le magasin et affiché ici. Il ne peut pas être stocké dans la commande car <code>raw.orders</code> ne possède pas de colonne <code>employee_id</code>.</p>
+    </aside>
+  </main>
+  <script src="{{ url_for('static', filename='generator_app.js') }}" defer></script>
+</body>
+</html>

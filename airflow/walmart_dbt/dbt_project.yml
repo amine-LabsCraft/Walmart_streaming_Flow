@@ -16,10 +16,10 @@ clean-targets:
 models:
   walmart_dbt:
 
-    silver_T: 
+    silver_t:
         +materialized: incremental
-        +schema: silver_T
-    silver_B: 
+        +schema: silver_t
+    silver_b:
          +materialized: table
          +schema: silver_b
 

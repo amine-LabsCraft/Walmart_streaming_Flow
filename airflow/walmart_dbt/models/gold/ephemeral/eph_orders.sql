@@ -1,7 +1,6 @@
 SELECT 
     DISTINCT
     order_id,
-    order_item_id,
     payment_method,
     order_status,
     order_timestamp,

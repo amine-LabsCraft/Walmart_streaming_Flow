@@ -27,6 +27,12 @@ ENV/
 .env.*
 !.env.example
 
+# Local database connection notes
+**/PostgreConnexion.txt
+
+# Preserved metadata from the former nested local repository
+**/.git.local-backup/
+
 # Airflow local files
 .airflow/
 airflow.db

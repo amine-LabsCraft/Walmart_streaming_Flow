@@ -2031,6 +2031,17 @@ wheels = [
 ]
 
 [[package]]
+name = "psycopg2"
+version = "2.9.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/bc/f66df707ed1aec949fbf24e4460e4f4277a7ba23cdadb3965bb1f634ddb9/psycopg2-2.9.12.tar.gz", hash = "sha256:1dedb1c7a1d8552c4a6044c6b1c41a52e6a8e2d144af83eccac758076b1b7c15", size = 379683, upload-time = "2026-04-20T23:36:11.013Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/a1/9cc069f8efc92383d3823ef8805c932f5fda723b3f07d2a8ee019ae2919f/psycopg2-2.9.12-cp311-cp311-win_amd64.whl", hash = "sha256:2532c0cdc6ad18c9c35cd935cc3159712e14f05276a6d29a6435c52d24b840c1", size = 2756862, upload-time = "2026-04-20T23:33:17.206Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/b2/7319dc488444b1dfe9ce89c4440df1d5425e2579e6ce9a63e2b70f648491/psycopg2-2.9.12-cp312-cp312-win_amd64.whl", hash = "sha256:83d48e66e18c301d832e93c984a7bcbc0f4ac3bb79e2137e3bc335978c756dc0", size = 2757068, upload-time = "2026-04-20T23:33:20.664Z" },
+    { url = "https://files.pythonhosted.org/packages/91/ab/03403779a251ca14a7f1b07a41c7aa735fd451f0aebe4c4f901a231167a4/psycopg2-2.9.12-cp313-cp313-win_amd64.whl", hash = "sha256:3d23e684927d37b95cee9a943f6927b04ae2fdcd056fd0e2a30929ee89fee5a9", size = 2757176, upload-time = "2026-04-20T23:33:23.577Z" },
+]
+
+[[package]]
 name = "pyarrow"
 version = "25.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2884,13 +2895,14 @@ wheels = [
 ]
 
 [[package]]
-name = "walmart-dbt"
+name = "walmart-streaming-flow"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "apache-airflow" },
     { name = "dbt-core" },
     { name = "dbt-databricks" },
+    { name = "psycopg2" },
 ]
 
 [package.metadata]
@@ -2898,6 +2910,7 @@ requires-dist = [
     { name = "apache-airflow", specifier = "==3.2.2" },
     { name = "dbt-core", specifier = "==1.11.12" },
     { name = "dbt-databricks", specifier = "==1.12.2" },
+    { name = "psycopg2", specifier = ">=2.9.12" },
 ]
 
 [[package]]

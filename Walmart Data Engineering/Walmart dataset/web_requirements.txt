@@ -1,0 +1,2 @@
+-r generator_requirements.txt
+Flask>=3.1,<4
