@@ -19,6 +19,8 @@ A production-minded retail data engineering project that continuously creates co
 [Architecture](#architecture) · [Pipeline](#end-to-end-pipeline) · [Data model](#gold-analytics-model) · [Run locally](#run-locally) · [Roadmap](#project-status-and-roadmap)
 
 </div>
+<p><a href="./Docs/RUN_PROJECT_TOMORROW.md"><strong>Run the complete project</strong></a></p>
+
 
 > [!NOTE]
 > This is an educational portfolio project. It is not affiliated with or endorsed by Walmart Inc.
