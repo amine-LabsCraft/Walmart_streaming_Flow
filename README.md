@@ -59,7 +59,7 @@ Incremental ingestion  ██████████  IMPLEMENTED
 Silver transformations ██████████  IMPLEMENTED
 Gold fact + snapshots  ██████████  IMPLEMENTED
 Airflow orchestration  ██████████  IMPLEMENTED
-Power BI dashboards    ███░░░░░░░  NEXT PHASE
+Power BI integration   [######----]  IN PROGRESS
 ```
 
 ---
@@ -69,6 +69,17 @@ Power BI dashboards    ███░░░░░░░  NEXT PHASE
 ### Executive view
 
 The image above is optimized for fast reading: user control, source transaction, CDC boundary, lakehouse, SQL serving, and dashboard consumption.
+
+### Technology flow — icon-only view
+
+<div align="center">
+  <img src="./Docs/architecture/walmart-streaming-flow-icon-pipeline.png" alt="Text-free icon pipeline from Order Pulse to Power BI" width="100%">
+  <br>
+  <sub>A text-free reading of the complete technology path; Airflow is shown below the data flow because it orchestrates the pipeline rather than transforming records itself.</sub>
+</div>
+
+> [!IMPORTANT]
+> Power BI is the active integration phase. Its presence in the architecture represents the intended consumption endpoint; it does not claim that the semantic model and dashboards are already finalized.
 
 ### Detailed engineering view
 
@@ -108,7 +119,7 @@ flowchart LR
 | Analytical data plane | Databricks, Delta tables, SQL Warehouse | Store, transform, and serve analytical datasets |
 | Transformation plane | dbt models, snapshots, macros, tests | Encode data contracts and business semantics |
 | Control plane | Airflow API server, scheduler, DAG processor, Celery worker | Schedule, sequence, retry, monitor, and fail safely |
-| Consumption plane | Power BI | Semantic model, DAX measures, dashboards |
+| Consumption plane | Power BI | Semantic model, DAX measures, and dashboards — integration in progress |
 
 ---
 
@@ -122,8 +133,8 @@ flowchart LR
 6. Airflow triggers the remote Databricks ingestion job hourly or manually.
 7. Databricks promotes source changes into Bronze.
 8. dbt incrementally merges the six technical entities, builds `obt_b`, runs tests, snapshots dimensions, and publishes `fact_orders`.
-9. Databricks SQL exposes Gold to Power BI.
-10. A Power BI refresh reveals the new orders, items, revenue, stores, employees, customers, and products.
+9. Databricks SQL is the serving boundary selected for the Power BI integration.
+10. Once that integration is completed, a refresh will reveal new orders, items, revenue, stores, employees, customers, and products.
 
 ```mermaid
 sequenceDiagram
@@ -602,9 +613,9 @@ SELECT
 FROM walmart.gold.fact_orders;
 ```
 
-### 6. Refresh Power BI
+### 6. Refresh Power BI when the integration is available
 
-Refresh only after `gold_facts_tests` succeeds.
+During the current integration phase, refresh only after `gold_facts_tests` succeeds.
 
 ---
 
@@ -649,7 +660,7 @@ docker compose -f airflow\docker-compose.yaml exec airflow-apiserver `
   airflow dags list-runs orchestrate
 ```
 
-### Definition of done for one demo cycle
+### Target definition of done for one complete demo cycle
 
 - Order Pulse shows newly generated orders.
 - Source rows have non-null `change_version` values.
@@ -678,6 +689,8 @@ docker compose -f airflow\docker-compose.yaml exec airflow-apiserver `
 
 ## Roadmap
 
+Power BI work remains intentionally marked as incomplete until the semantic model, dashboard pages, refresh, and KPI-change demonstration are validated end to end.
+
 - [x] External Ghost PostgreSQL source
 - [x] Browser-controlled continuous order generator
 - [x] Atomic, FK-safe order creation
@@ -688,10 +701,10 @@ docker compose -f airflow\docker-compose.yaml exec airflow-apiserver `
 - [x] Airflow orchestration and final quality gate
 - [x] Architecture documentation and operational runbook
 - [ ] Databricks SQL Warehouse validation
-- [ ] Power BI semantic model
-- [ ] Executive/store/product/customer dashboard pages
-- [ ] Scheduled Power BI refresh
-- [ ] End-to-end KPI change demonstration
+- [ ] Complete and validate the Power BI semantic model
+- [ ] Complete the executive/store/product/customer dashboard pages
+- [ ] Configure and validate scheduled Power BI refresh
+- [ ] Validate the end-to-end KPI change demonstration
 
 ---
 
