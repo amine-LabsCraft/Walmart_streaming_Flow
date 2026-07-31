@@ -73,7 +73,7 @@ The image above is optimized for fast reading: user control, source transaction,
 ### Technology flow — icon-only view
 
 <div align="center">
-  <img src="./Docs/architecture/walmart-streaming-flow-icon-pipeline.png" alt="Text-free icon pipeline from Order Pulse to Power BI" width="100%">
+  <img src="./Docs/architecture/FLOW.png" alt="Text-free icon pipeline from Order Pulse to Power BI" width="100%">
   <br>
   <sub>A text-free reading of the complete technology path; Airflow is shown below the data flow because it orchestrates the pipeline rather than transforming records itself.</sub>
 </div>
@@ -84,7 +84,7 @@ The image above is optimized for fast reading: user control, source transaction,
 ### Detailed engineering view
 
 <div align="center">
-  <img src="./Docs/architecture/walmart-streaming-flow-end-to-end.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
+  <img src="./Docs/architecture/end_to_end.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
   <br>
   <sub>Exact source entities, layer responsibilities, dbt controls, and hourly Airflow execution.</sub>
 </div>
@@ -122,6 +122,12 @@ flowchart LR
 | Consumption plane | Power BI | Semantic model, DAX measures, and dashboards — integration in progress |
 
 ---
+
+<div align="center">
+  <img src="./Docs/architecture/over_view.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
+  <br>
+  <sub>Exact source entities, layer responsibilities, dbt controls, and hourly Airflow execution.</sub>
+</div>
 
 ## Data flow in 90 seconds
 
