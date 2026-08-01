@@ -1,9 +1,11 @@
-"""Local web interface for the Ghost PostgreSQL order generator."""
+"""Local web interface for the Ghost PostgreSQL source-event generator."""
 
 from __future__ import annotations
 
+import random
 import socket
 import threading
+import unicodedata
 from collections import deque
 from datetime import datetime, timezone
 from typing import Any
@@ -22,10 +24,39 @@ from continuous_order_generator import (
 DEFAULT_INTERVAL_SECONDS = 10.0
 MIN_INTERVAL_SECONDS = 2.0
 MAX_INTERVAL_SECONDS = 3600.0
-MAX_ACTIVITY_ITEMS = 30
+MAX_ACTIVITY_ITEMS = 40
 DEFAULT_PORT = 5050
+CUSTOMER_ADVISORY_LOCK_ID = 2_026_073_003
+RANDOM = random.SystemRandom()
+
+FIRST_NAMES = (
+    "Alex", "Amélie", "Arthur", "Camille", "Chloé", "Élodie",
+    "Emma", "Hugo", "Jade", "Léa", "Liam", "Lucas",
+    "Maya", "Nathan", "Nora", "Olivia", "Raphaël", "Sofia",
+)
+LAST_NAMES = (
+    "Bélanger", "Bouchard", "Caron", "Dubois", "Fortin", "Gagnon",
+    "Girard", "Lavoie", "Martin", "Morin", "Nguyen", "Roy",
+    "Simard", "Tremblay", "Wong",
+)
+LOCATIONS = (
+    ("Montréal", "Québec", "Canada", "514"),
+    ("Québec", "Québec", "Canada", "418"),
+    ("Toronto", "Ontario", "Canada", "416"),
+    ("Ottawa", "Ontario", "Canada", "613"),
+    ("Vancouver", "Colombie-Britannique", "Canada", "604"),
+    ("Calgary", "Alberta", "Canada", "403"),
+    ("Edmonton", "Alberta", "Canada", "780"),
+    ("Halifax", "Nouvelle-Écosse", "Canada", "902"),
+    ("Winnipeg", "Manitoba", "Canada", "204"),
+)
+EMAIL_DOMAINS = ("mail.ca", "inbox.ca", "clientmail.ca")
 
 app = Flask(__name__)
+
+
+def utc_now_without_timezone() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def utc_iso() -> str:
@@ -34,6 +65,7 @@ def utc_iso() -> str:
 
 def order_to_dict(order: GeneratedOrder) -> dict[str, Any]:
     return {
+        "event_type": "order",
         "order_id": order.order_id,
         "customer_id": order.customer.customer_id,
         "customer_name": order.customer.display_name,
@@ -47,6 +79,97 @@ def order_to_dict(order: GeneratedOrder) -> dict[str, Any]:
     }
 
 
+def email_slug(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return (
+        normalized.encode("ascii", "ignore")
+        .decode("ascii")
+        .lower()
+        .replace(" ", "-")
+        .replace("'", "")
+    )
+
+
+def create_customer_signup() -> dict[str, Any]:
+    """Generate and persist one synthetic, active Canadian customer."""
+
+    connection = connect(get_connection_string())
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT pg_advisory_xact_lock(%s)",
+                (CUSTOMER_ADVISORY_LOCK_ID,),
+            )
+            cursor.execute(
+                "SELECT COALESCE(MAX(customer_id), 0) + 1 FROM raw.customers"
+            )
+            customer_id = int(cursor.fetchone()[0])
+
+            first_name = RANDOM.choice(FIRST_NAMES)
+            last_name = RANDOM.choice(LAST_NAMES)
+            city, province, country, area_code = RANDOM.choice(LOCATIONS)
+            domain = RANDOM.choice(EMAIL_DOMAINS)
+            email = (
+                f"{email_slug(first_name)}.{email_slug(last_name)}."
+                f"{customer_id}@{domain}"
+            )
+            phone = (
+                f"+1 {area_code}-"
+                f"{RANDOM.randint(200, 999):03d}-"
+                f"{RANDOM.randint(1000, 9999):04d}"
+            )
+            created_at = utc_now_without_timezone()
+
+            cursor.execute(
+                """
+                INSERT INTO raw.customers (
+                    customer_id,
+                    first_name,
+                    last_name,
+                    email,
+                    phone,
+                    city,
+                    province,
+                    country,
+                    created_timestamp,
+                    updated_timestamp,
+                    is_active
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Y')
+                """,
+                (
+                    customer_id,
+                    first_name,
+                    last_name,
+                    email,
+                    phone,
+                    city,
+                    province,
+                    country,
+                    created_at,
+                    created_at,
+                ),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return {
+        "event_type": "customer_signup",
+        "customer_id": customer_id,
+        "customer_name": f"{first_name} {last_name}",
+        "email": email,
+        "phone": phone,
+        "city": city,
+        "province": province,
+        "country": country,
+        "generated_at": utc_iso(),
+    }
+
+
 class GeneratorController:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -54,21 +177,16 @@ class GeneratorController:
         self._thread: threading.Thread | None = None
         self._mode = "idle"
         self._interval = DEFAULT_INTERVAL_SECONDS
-        self._customer_mode = "random"
-        self._fixed_customer_id: int | None = None
         self._active_customer_id: int | None = None
         self._active_customer_name: str | None = None
         self._orders_generated = 0
+        self._customers_signed_up = 0
+        self._last_signup: dict[str, Any] | None = None
         self._last_error: str | None = None
         self._last_order: dict[str, Any] | None = None
         self._activity: deque[dict[str, Any]] = deque(maxlen=MAX_ACTIVITY_ITEMS)
 
-    def start(
-        self,
-        interval: float,
-        customer_mode: str,
-        fixed_customer_id: int | None,
-    ) -> tuple[bool, str]:
+    def start(self, interval: float) -> tuple[bool, str]:
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 return False, "Le générateur est déjà actif."
@@ -76,14 +194,11 @@ class GeneratorController:
             self._stop_event = threading.Event()
             self._mode = "starting"
             self._interval = interval
-            self._customer_mode = customer_mode
-            self._fixed_customer_id = fixed_customer_id
             self._active_customer_id = None
             self._active_customer_name = None
             self._orders_generated = 0
             self._last_error = None
             self._last_order = None
-            self._activity.clear()
             self._thread = threading.Thread(
                 target=self._run,
                 daemon=True,
@@ -102,6 +217,12 @@ class GeneratorController:
             self._stop_event.set()
         return True, "Arrêt demandé."
 
+    def add_customer_signup(self, event: dict[str, Any]) -> None:
+        with self._lock:
+            self._customers_signed_up += 1
+            self._last_signup = event
+            self._activity.appendleft(event)
+
     def _next_random_customer(self, connection: Any, previous_id: int | None) -> Any:
         customer = select_customer(connection, None)
         for _ in range(5):
@@ -117,25 +238,14 @@ class GeneratorController:
 
         try:
             connection = connect(get_connection_string())
-            fixed_customer = None
-            if self._customer_mode == "fixed":
-                fixed_customer = select_customer(
-                    connection,
-                    self._fixed_customer_id,
-                )
-
             with self._lock:
                 self._mode = "running"
 
             while not self._stop_event.is_set():
-                if fixed_customer is None:
-                    customer = self._next_random_customer(
-                        connection,
-                        previous_customer_id,
-                    )
-                else:
-                    customer = fixed_customer
-
+                customer = self._next_random_customer(
+                    connection,
+                    previous_customer_id,
+                )
                 order = create_order(
                     connection,
                     customer=customer,
@@ -186,11 +296,11 @@ class GeneratorController:
             return {
                 "mode": self._mode,
                 "interval_seconds": self._interval,
-                "customer_mode": self._customer_mode,
-                "fixed_customer_id": self._fixed_customer_id,
                 "active_customer_id": self._active_customer_id,
                 "active_customer_name": self._active_customer_name,
                 "orders_generated": self._orders_generated,
+                "customers_signed_up": self._customers_signed_up,
+                "last_signup": self._last_signup,
                 "last_error": self._last_error,
                 "last_order": self._last_order,
                 "activity": list(self._activity),
@@ -214,18 +324,12 @@ def api_status() -> Any:
 @app.post("/api/start")
 def api_start() -> Any:
     payload = request.get_json(silent=True) or {}
-    customer_mode = str(payload.get("customer_mode", "random"))
-
-    if customer_mode not in {"random", "fixed"}:
-        return jsonify(
-            {"ok": False, "message": "Mode client invalide."}
-        ), 400
 
     try:
         interval = float(payload.get("interval_seconds", DEFAULT_INTERVAL_SECONDS))
     except (TypeError, ValueError):
         return jsonify(
-            {"ok": False, "message": "L'intervalle doit être un nombre."}
+            {"ok": False, "message": "L’intervalle doit être un nombre."}
         ), 400
 
     if not MIN_INTERVAL_SECONDS <= interval <= MAX_INTERVAL_SECONDS:
@@ -233,36 +337,13 @@ def api_start() -> Any:
             {
                 "ok": False,
                 "message": (
-                    f"L'intervalle doit être compris entre "
+                    f"L’intervalle doit être compris entre "
                     f"{MIN_INTERVAL_SECONDS:g} et {MAX_INTERVAL_SECONDS:g} secondes."
                 ),
             }
         ), 400
 
-    fixed_customer_id = None
-    if customer_mode == "fixed":
-        try:
-            fixed_customer_id = int(payload.get("customer_id"))
-        except (TypeError, ValueError):
-            return jsonify(
-                {
-                    "ok": False,
-                    "message": "Indiquez un customer_id entier pour le mode fixe.",
-                }
-            ), 400
-        if fixed_customer_id <= 0:
-            return jsonify(
-                {
-                    "ok": False,
-                    "message": "Le customer_id doit être supérieur à zéro.",
-                }
-            ), 400
-
-    started, message = controller.start(
-        interval=interval,
-        customer_mode=customer_mode,
-        fixed_customer_id=fixed_customer_id,
-    )
+    started, message = controller.start(interval=interval)
     return jsonify({"ok": started, "message": message}), 200 if started else 409
 
 
@@ -270,6 +351,31 @@ def api_start() -> Any:
 def api_stop() -> Any:
     stopped, message = controller.stop()
     return jsonify({"ok": stopped, "message": message})
+
+
+@app.post("/api/customers/signup")
+def api_customer_signup() -> Any:
+    try:
+        event = create_customer_signup()
+    except Exception as exc:
+        return jsonify(
+            {
+                "ok": False,
+                "message": f"Sign up impossible dans PostgreSQL : {exc}",
+            }
+        ), 500
+
+    controller.add_customer_signup(event)
+    return jsonify(
+        {
+            "ok": True,
+            "message": (
+                f"Client #{event['customer_id']} généré et inscrit. "
+                "Il est maintenant éligible aux prochaines commandes."
+            ),
+            "customer": event,
+        }
+    ), 201
 
 
 def find_available_port(preferred: int = DEFAULT_PORT) -> int:

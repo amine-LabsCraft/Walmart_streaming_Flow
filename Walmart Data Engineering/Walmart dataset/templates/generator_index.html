@@ -3,100 +3,245 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Console locale de génération de commandes vers PostgreSQL Ghost.">
-  <title>Order Pulse · Ghost PostgreSQL</title>
+  <meta name="description" content="Console opérationnelle des événements source Walmart.">
+  <title>Order Pulse · Source Control</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='generator_styles.css') }}">
 </head>
 <body>
-  <main class="shell">
-    <header class="topbar">
+  <div class="app-shell">
+    <aside class="sidebar">
       <a class="brand" href="/" aria-label="Order Pulse">
-        <span class="brand-mark">OP</span>
-        <span><strong>Order Pulse</strong><small>Ghost PostgreSQL</small></span>
+        <span class="spark-mark" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
+        <span>
+          <strong>Order Pulse</strong>
+          <small>Source Control</small>
+        </span>
       </a>
-      <div class="connection-state" id="connection-state">
-        <span class="status-dot"></span>
-        <span id="connection-label">Prêt</span>
-      </div>
-    </header>
 
-    <section class="hero">
-      <div class="intro">
-        <p class="eyebrow">Source generator · contrôle local</p>
-        <h1>Des commandes<br>qui prennent<br><em>le rythme.</em></h1>
-        <p class="intro-copy">
-          Chaque cycle choisit un client actif et un autre magasin, construit
-          une commande cohérente avec 1 à 5 articles, puis l'écrit directement
-          dans Ghost en une seule transaction.
-        </p>
-      </div>
+      <nav class="event-nav" aria-label="Événements source">
+        <p class="nav-label">Événements</p>
+        <button class="nav-item active" type="button" data-panel-target="orders" aria-controls="orders-panel" aria-selected="true">
+          <span class="nav-icon" aria-hidden="true">↗</span>
+          <span><strong>Commandes</strong><small>Génération continue</small></span>
+        </button>
+        <button class="nav-item" type="button" data-panel-target="signup" aria-controls="signup-panel" aria-selected="false">
+          <span class="nav-icon" aria-hidden="true">+</span>
+          <span><strong>Nouveau client</strong><small>Inscription source</small></span>
+        </button>
+      </nav>
 
-      <section class="console-card" aria-label="Configuration du générateur">
-        <div class="pulse-zone">
-          <div class="pulse-orbit" id="pulse-orbit">
-            <span id="countdown">10</span><small>secondes</small>
-          </div>
-          <div>
-            <p>Prochaine commande</p>
-            <strong id="mode-title">En attente</strong>
-          </div>
+      <div class="source-card">
+        <span class="source-card-icon" aria-hidden="true">DB</span>
+        <div>
+          <strong>Ghost PostgreSQL</strong>
+          <small>Écriture transactionnelle</small>
         </div>
+        <span class="source-check" aria-label="Connecteur configuré">✓</span>
+      </div>
+    </aside>
 
-        <form id="generator-form">
-          <fieldset>
-            <legend>Choix du client</legend>
-            <label class="choice">
-              <input type="radio" name="customer_mode" value="random" checked>
-              <span><strong>Client variable</strong><small>Nouveau client actif à chaque commande</small></span>
-            </label>
-            <label class="choice">
-              <input type="radio" name="customer_mode" value="fixed">
-              <span><strong>Client fixe</strong><small>Le même client pendant la session</small></span>
-            </label>
-          </fieldset>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="breadcrumb">Walmart Streaming Flow <span>/</span> Source</p>
+          <h1>Source control room</h1>
+        </div>
+        <div class="connection-state" id="connection-state">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="connection-label">Prêt</span>
+        </div>
+      </header>
 
-          <div class="field-grid">
-            <label>
-              <span>Customer ID</span>
-              <input id="customer-id" type="number" min="1" placeholder="Ex. 42" disabled>
-            </label>
-            <label>
-              <span>Intervalle</span>
-              <div class="unit-input">
-                <input id="interval" type="number" min="2" max="3600" step="1" value="10" required>
+      <section class="pipeline-rail" aria-label="Pipeline de données">
+        <div class="pipeline-node active">
+          <span class="node-icon">OP</span>
+          <span><strong>Source events</strong><small>temps réel</small></span>
+        </div>
+        <span class="rail-arrow" aria-hidden="true">→</span>
+        <div class="pipeline-node">
+          <span class="node-icon postgres">PG</span>
+          <span><strong>PostgreSQL</strong><small>raw</small></span>
+        </div>
+        <span class="rail-arrow" aria-hidden="true">→</span>
+        <div class="pipeline-node">
+          <span class="node-icon databricks">DBX</span>
+          <span><strong>Databricks</strong><small>Bronze → Gold</small></span>
+        </div>
+        <span class="rail-arrow" aria-hidden="true">→</span>
+        <div class="pipeline-node">
+          <span class="node-icon powerbi">BI</span>
+          <span><strong>Power BI</strong><small>dashboard</small></span>
+        </div>
+        <span class="pipeline-schedule">Traitement horaire</span>
+      </section>
+
+      <section class="metrics" aria-label="Résumé de la session">
+        <article>
+          <span class="metric-label">Commandes</span>
+          <div><strong id="orders-count">0</strong><small>injectées</small></div>
+        </article>
+        <article>
+          <span class="metric-label">Inscriptions</span>
+          <div><strong id="signups-count">0</strong><small>nouveaux clients</small></div>
+        </article>
+        <article>
+          <span class="metric-label">Client récent</span>
+          <div><strong id="active-customer">—</strong><small>dernière commande</small></div>
+        </article>
+        <article>
+          <span class="metric-label">Panier récent</span>
+          <div><strong id="last-total">—</strong><small>CAD</small></div>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <div class="control-column">
+          <section class="control-panel" id="orders-panel" data-panel="orders">
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker">Événement 01</span>
+                <h2>Générer des commandes</h2>
+              </div>
+              <span class="panel-table">orders + order_items</span>
+            </div>
+
+            <div class="generator-state">
+              <div class="countdown-ring" id="pulse-orbit">
+                <strong id="countdown">10</strong>
                 <small>sec</small>
               </div>
-            </label>
+              <div>
+                <span>Prochaine commande</span>
+                <strong id="mode-title">En attente</strong>
+                <small>Client, magasin et employé choisis automatiquement</small>
+              </div>
+            </div>
+
+            <form id="generator-form">
+              <label class="field-label" for="interval">Intervalle de génération</label>
+              <div class="interval-control">
+                <div class="unit-input">
+                  <input id="interval" type="number" min="2" max="3600" step="1" value="10" required>
+                  <span>secondes</span>
+                </div>
+                <div class="quick-times" aria-label="Intervalles rapides">
+                  <button type="button" data-interval="5">5 s</button>
+                  <button type="button" data-interval="10" class="selected">10 s</button>
+                  <button type="button" data-interval="30">30 s</button>
+                </div>
+              </div>
+              <div class="action-row">
+                <button class="primary-button" id="start-button" type="submit">
+                  <span aria-hidden="true">▶</span> Démarrer
+                </button>
+                <button class="secondary-button" id="stop-button" type="button" disabled>
+                  <span aria-hidden="true">■</span> Arrêter
+                </button>
+              </div>
+            </form>
+            <p class="feedback" id="generator-feedback" role="status" aria-live="polite"></p>
+
+            <div class="business-rule">
+              <span aria-hidden="true">✓</span>
+              <p><strong>Intégrité garantie.</strong> Chaque employé appartient au magasin de la commande et toutes les entités sont actives.</p>
+            </div>
+          </section>
+
+          <section class="control-panel" id="signup-panel" data-panel="signup" hidden>
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker yellow">Événement 02</span>
+                <h2>Inscrire un client</h2>
+              </div>
+              <span class="panel-table">customers</span>
+            </div>
+
+            <p class="panel-intro">
+              Créez un client actif dans PostgreSQL. Il rejoint immédiatement
+              la population éligible aux prochaines commandes.
+            </p>
+
+            <div class="profile-generator">
+              <div class="profile-visual">
+                <span class="auto-avatar" aria-hidden="true">AI</span>
+                <div>
+                  <strong>Profil synthétique automatique</strong>
+                  <small>Identité canadienne cohérente et unique</small>
+                </div>
+                <span class="auto-badge">AUTO</span>
+              </div>
+              <ul class="generated-fields">
+                <li><span>Identité</span><strong>Prénom + nom aléatoires</strong></li>
+                <li><span>Contact</span><strong>E-mail unique + téléphone</strong></li>
+                <li><span>Localisation</span><strong>Ville et province cohérentes</strong></li>
+                <li><span>Statut</span><strong class="active-value">Actif · Y</strong></li>
+              </ul>
+            </div>
+
+            <div class="last-signup" id="last-signup-preview" hidden>
+              <div class="last-signup-avatar" id="signup-preview-initials">—</div>
+              <div>
+                <span>Dernier profil généré</span>
+                <strong id="signup-preview-name">—</strong>
+                <small id="signup-preview-email">—</small>
+              </div>
+              <div class="last-signup-location">
+                <strong id="signup-preview-location">—</strong>
+                <small id="signup-preview-phone">—</small>
+              </div>
+            </div>
+
+            <button class="signup-button" id="signup-button" type="button">
+              <span aria-hidden="true">✦</span> Générer un sign up
+            </button>
+            <p class="feedback" id="signup-feedback" role="status" aria-live="polite"></p>
+
+            <div class="business-rule signup-rule">
+              <span aria-hidden="true">↻</span>
+              <p><strong>Réutilisable immédiatement.</strong> Aucun redémarrage du générateur n’est nécessaire.</p>
+            </div>
+          </section>
+        </div>
+
+        <section class="stream-panel" aria-labelledby="stream-title">
+          <div class="stream-heading">
+            <div>
+              <span class="live-label"><i></i> Live</span>
+              <h2 id="stream-title">Flux PostgreSQL</h2>
+            </div>
+            <div class="stream-filters" aria-label="Filtrer les événements">
+              <button type="button" class="active" data-event-filter="all">Tous</button>
+              <button type="button" data-event-filter="order">Commandes</button>
+              <button type="button" data-event-filter="customer_signup">Clients</button>
+            </div>
           </div>
 
-          <button class="primary-button" id="start-button" type="submit">Démarrer la génération</button>
-        </form>
-        <button class="stop-button" id="stop-button" type="button" disabled>Arrêter</button>
-        <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+          <div class="stream-columns" aria-hidden="true">
+            <span>Événement</span>
+            <span>Détails</span>
+            <span>Contexte</span>
+            <span>Heure</span>
+          </div>
+
+          <div class="event-stream" id="activity-list">
+            <div class="empty-state">
+              <span class="empty-icon">⌁</span>
+              <strong>Le flux est prêt</strong>
+              <p>Démarrez les commandes ou créez un client pour voir les événements arriver ici.</p>
+            </div>
+          </div>
+        </section>
       </section>
-    </section>
 
-    <section class="metrics" aria-label="Résumé">
-      <article><span>Commandes injectées</span><strong id="orders-count">0</strong></article>
-      <article><span>Client actuel</span><strong id="active-customer">-</strong></article>
-      <article><span>Dernier total</span><strong id="last-total">-</strong></article>
-    </section>
-
-    <section class="activity-section">
-      <div class="section-heading">
-        <div><p class="eyebrow">Flux direct</p><h2>Tickets récents</h2></div>
-        <p>Écriture atomique dans <code>raw.orders</code> et <code>raw.order_items</code></p>
-      </div>
-      <div class="ticket-stack" id="activity-list">
-        <div class="empty-state"><span>?</span><p>Démarrez le générateur pour voir les commandes arriver.</p></div>
-      </div>
-    </section>
-
-    <aside class="schema-note">
-      <strong>Relation employé</strong>
-      <p>L'employé actif est choisi dans le magasin et affiché ici. Il ne peut pas être stocké dans la commande car <code>raw.orders</code> ne possède pas de colonne <code>employee_id</code>.</p>
-    </aside>
-  </main>
+      <footer class="footer-note">
+        <span>Les secrets restent côté serveur</span>
+        <span>Transactions atomiques</span>
+        <span>CDC compatible</span>
+      </footer>
+    </main>
+  </div>
   <script src="{{ url_for('static', filename='generator_app.js') }}" defer></script>
 </body>
 </html>
