@@ -577,6 +577,8 @@ Walmart Streaming Flow/
 ## Quick start
 
 For the complete startup, validation, Power BI, and shutdown procedure, use the **[project runbook](./Docs/RUN_PROJECT_TOMORROW.md)**.
+For the complete page-by-page dashboard design, visual specifications, DAX measures, and validation checklist, use the **[Power BI dashboard guide](./Docs/POWER_BI_DASHBOARD_GUIDE.md)**.
+
 
 ### 1. Start Airflow
 
