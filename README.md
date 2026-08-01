@@ -50,17 +50,7 @@ That separation mirrors a real data platform: source systems continue to transac
 | BI semantics | Line-level `fact_orders` with documented additive and non-additive measures |
 | Reproducibility | Docker Compose, locked Python dependencies, environment-driven configuration |
 
-### Current delivery status
 
-```text
-Source generator       ██████████  READY
-Ghost PostgreSQL       ██████████  READY
-Incremental ingestion  ██████████  IMPLEMENTED
-Silver transformations ██████████  IMPLEMENTED
-Gold fact + snapshots  ██████████  IMPLEMENTED
-Airflow orchestration  ██████████  IMPLEMENTED
-Power BI dashboards    [##########]  COMPLETED
-```
 
 ---
 
