@@ -20,7 +20,7 @@
 </div>
 
 <div align="center">
-  <img src="./Docs/architecture/walmart-streaming-flow-general-view.png" alt="Walmart Streaming Flow general architecture" width="100%">
+  <img src="./Docs/architecture/end_to_end_architecture.png" alt="Walmart Streaming Flow general architecture" width="100%">
 </div>
 
 > [!NOTE]
@@ -74,7 +74,7 @@ The image above is optimized for fast reading: user control, source transaction,
 ### Detailed engineering view
 
 <div align="center">
-  <img src="./Docs/architecture/end_to_end.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
+  <img src="./Docs/architecture/over_view.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
   <br>
   <sub>Exact source entities, layer responsibilities, dbt controls, and hourly Airflow execution.</sub>
 </div>
@@ -114,7 +114,7 @@ flowchart LR
 ---
 
 <div align="center">
-  <img src="./Docs/architecture/over_view.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
+  <img src="./Docs/architecture/etapes.png" alt="Detailed Walmart Streaming Flow architecture" width="100%">
   <br>
   <sub>Exact source entities, layer responsibilities, dbt controls, and hourly Airflow execution.</sub>
 </div>
