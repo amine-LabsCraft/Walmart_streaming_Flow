@@ -22,75 +22,151 @@ La table centrale est `fact_orders`, au grain d’**une ligne de commande** (`or
 
 ---
 
-## 2. Modèle sémantique recommandé
+## 2. Modèle sémantique Power BI après correction
+
+### Grain analytique
+
+`walmart.gold.fact_orders` est la table centrale :
 
 ```text
-                      dim_orders
-                           │
-                           │ 1
-                           ▼ *
-dim_customers  1 ────► fact_orders ◄──── 1 dim_products
-                           ▲
-                           │ *
-                           │ 1
-                       dim_stores
-
-dim_employees 1 ─────► fact_orders
-   dimension conforme sur tout l’historique
+1 ligne = 1 article de commande = 1 order_item_id
 ```
 
-### Relations
+Une commande peut apparaître sur plusieurs lignes. Utiliser `sales_amount` pour le revenu, `DISTINCTCOUNT(order_id)` pour les commandes et `SUM(quantity)` pour les quantités. Ne jamais additionner `order_total_amount`, répété sur chaque article.
 
-| Dimension | Colonne dimension | Colonne fact | Cardinalité | Filtrage |
+### Tables à charger
+
+| Rôle | Table | Clé | Usage |
+|---|---|---|---|
+| Fact | `walmart.gold.fact_orders` | `order_item_id` | Ventes au grain article |
+| Dimension | `walmart.gold.dim_orders` | `order_id` | Commandes |
+| Dimension | `walmart.gold.dim_customers` | `customer_id` | Clients |
+| Dimension | `walmart.gold.dim_products` | `product_id` | Produits |
+| Dimension | `walmart.gold.dim_stores` | `store_id` | Magasins |
+| Dimension | `walmart.gold.dim_employees` | `employee_id` | Employés |
+
+Ne pas charger Bronze, Silver, `obt_b` ni les tables de restauration telles que :
+
+- `dim_orders_backup_pre_grain_fix_20260730` ;
+- `dim_employees_backup_pre_null_cleanup_20260801` ;
+- toute table contenant `backup`, `temp` ou `test`.
+
+### Schéma en étoile validé
+
+```mermaid
+flowchart TB
+    DO["dim_orders<br/>order_id unique"]
+    DC["dim_customers<br/>customer_id unique"]
+    DP["dim_products<br/>product_id unique"]
+    DS["dim_stores<br/>store_id unique"]
+    DE["dim_employees<br/>employee_id unique"]
+    F[("fact_orders<br/>1 ligne / order_item_id")]
+
+    DO -->|"1 : * · order_id"| F
+    DC -->|"1 : * · customer_id"| F
+    DP -->|"1 : * · product_id"| F
+    DS -->|"1 : * · store_id"| F
+    DE -->|"1 : * · employee_id"| F
+```
+
+### Relations Power BI
+
+| Dimension côté `1` | Clé dimension | Fact côté `*` | Clé fact | Filtrage |
 |---|---|---|---|---|
-| `dim_customers` | `customer_id` | `customer_id` | `1:*` | Sens unique |
-| `dim_products` | `product_id` | `product_id` | `1:*` | Sens unique |
-| `dim_stores` | `store_id` | `store_id` | `1:*` | Sens unique |
-| `dim_orders` | `order_id` | `order_id` | `1:*` | Sens unique |
-| `dim_employees` | `employee_id` | `employee_id` | `1:*` | Sens unique |
+| `dim_orders` | `order_id` | `fact_orders` | `order_id` | Sens unique |
+| `dim_customers` | `customer_id` | `fact_orders` | `customer_id` | Sens unique |
+| `dim_products` | `product_id` | `fact_orders` | `product_id` | Sens unique |
+| `dim_stores` | `store_id` | `fact_orders` | `store_id` | Sens unique |
+| `dim_employees` | `employee_id` | `fact_orders` | `employee_id` | Sens unique |
 
 Règles :
 
-- la dimension filtre le fact ;
-- éviter les relations à double sens ;
-- ne pas créer de relation active `dim_employees → dim_stores` ;
-- `fact_orders[employee_id]` doit toujours être renseigné ;
-- `dim_employees[employee_id]` doit être unique et sans valeur vide ;
-- utiliser les employés dans la page dédiée et dans les analyses croisées pertinentes.
+- créer cinq relations actives `1:*`, toujours de la dimension vers le fact ;
+- ne pas utiliser le double sens ;
+- ne pas créer de relation active `dim_stores → dim_employees`, car les deux dimensions filtrent déjà `fact_orders` ;
+- ne pas choisir `*:*` pour contourner une erreur de clé.
 
-### Dimensions SCD2 dans Power BI
+### Dimensions SCD2 : modèle courant recommandé
 
-Les dimensions Gold sont historisées par dbt. Une dimension SCD2 peut contenir plusieurs versions du même identifiant métier. Pour conserver une vraie relation `1:*` dans Power BI, charger uniquement la version courante de chaque dimension :
+Les dimensions sont des snapshots dbt SCD2 avec `dbt_scd_id`, `dbt_valid_from` et `dbt_valid_to`. Le fact contient les clés métier, mais pas les clés de version `dbt_scd_id`. Dans Power BI, utiliser donc une projection **courante** de chaque dimension.
 
-```text
-dbt_valid_to = 31/12/9999
+Dans Power Query, filtrer `dim_orders`, `dim_customers`, `dim_products`, `dim_stores` et `dim_employees` :
+
+```powerquery-m
+Table.SelectRows(
+    #"Étape précédente",
+    each Date.From([dbt_valid_to]) = #date(9999, 12, 31)
+)
 ```
 
-Dans Power Query, appliquer ce filtre à `dim_customers`, `dim_products`, `dim_stores`, `dim_orders` et `dim_employees`, puis :
+Après ce filtre :
 
-1. définir la clé métier avec le type **Nombre entier** ;
-2. exclure les valeurs `null`, vides ou en erreur ;
-3. supprimer les doublons sur la clé métier ;
-4. fermer et appliquer avant de créer les relations.
+- la clé métier doit être unique ;
+- la clé ne doit contenir ni `null`, ni vide, ni erreur ;
+- toutes les clés liées doivent avoir le même type, recommandé **Nombre entier**.
 
-Pour `dim_employees`, le modèle validé respecte les invariants suivants :
+Ne pas supprimer aveuglément les doublons dans Power Query. Un doublon restant après le filtre courant signale un problème à corriger dans le modèle ou les données.
+
+> Une analyse SCD2 historique « as-of » nécessiterait une clé de version dans `fact_orders`. Le modèle Power BI actuel analyse les faits historiques avec les attributs courants des dimensions.
+
+### Contrat Employés corrigé
+
+Le modèle garantit désormais :
 
 ```text
-employee_id unique dans dim_employees
-employee_id non NULL dans dim_employees
-employee_id non NULL dans fact_orders
-employee.store_id = fact_orders.store_id
+fact_orders.employee_id      : non NULL
+dim_employees.employee_id    : non NULL et unique après filtre current
+clé du fact                  : présente dans dim_employees
+store de la commande         : identique au store de l’employé
+nouvelle commande générée    : employé actif du même magasin
 ```
+
+Le backfill n’a modifié que `employee_id` sur les anciennes commandes. Les dates, clients, magasins, produits, quantités et montants ont été conservés.
+
+Attention à l’interprétation :
+
+- la **complétude technique** Employés est de 100 % ;
+- les anciennes affectations Employé ont été reconstruites dans le même magasin pour ce dataset de démonstration ;
+- elles permettent de tester le schéma, les relations et les visuels ;
+- elles ne représentent pas une preuve RH ou transactionnelle historiquement observée.
+
+### Vérification avant les relations
+
+Activer le profilage Power Query sur **l’ensemble du jeu de données** et obtenir :
+
+| Contrôle | Attendu |
+|---|---:|
+| `dim_employees[employee_id]` vide | 0 |
+| Doublon `employee_id` après filtre current | 0 |
+| `fact_orders[employee_id]` vide | 0 |
+| Doublon `dim_orders[order_id]` après filtre current | 0 |
+| Erreur de conversion sur une clé | 0 |
+
+### Erreur Power BI « valeur en double Null »
+
+Si Databricks est propre mais que Power BI affiche encore cette erreur :
+
+1. fermer la fenêtre de relation ;
+2. ouvrir **Transformer les données** ;
+3. actualiser l’aperçu de `dim_employees` et `fact_orders` ;
+4. appliquer le filtre `dbt_valid_to = 31/12/9999` ;
+5. vérifier les erreurs de conversion de `employee_id` ;
+6. **Fermer et appliquer** ;
+7. exécuter **Accueil → Actualiser** ;
+8. si nécessaire, vider le cache depuis **Options → Chargement des données** ;
+9. créer `dim_employees[employee_id] 1 → * fact_orders[employee_id]` en sens unique.
+
+Ne pas passer en plusieurs-à-plusieurs pour masquer l’erreur.
 
 ### Dates
 
-Dans cette première version, utiliser directement :
+Utiliser directement :
 
 - `fact_orders[order_date]` pour les tendances journalières et mensuelles ;
 - `fact_orders[order_timestamp]` pour les heures ;
 - `fact_orders[date_key]` comme identifiant technique.
 
-Créer les colonnes calculées suivantes dans `fact_orders` :
+Créer dans `fact_orders` :
 
 ```DAX
 Order Year = YEAR ( fact_orders[order_date] )
@@ -624,7 +700,9 @@ Facteurs explicatifs :
 
 ### Objectif
 
-Analyser la contribution, la charge commerciale et le panier moyen des employés sur **tout l’historique des commandes**. Le backfill historique garantit qu’une commande possède toujours un employé actif appartenant au même magasin.
+Analyser la contribution attribuée, la charge commerciale et le panier moyen des employés avec une relation Employé–Fact techniquement complète.
+
+> Couverture technique : 100 %. Les affectations des anciennes commandes ont été reconstruites avec un employé actif du même magasin pour ce dataset de démonstration ; elles ne constituent pas une observation RH historique.
 
 ### Préparation
 
@@ -662,7 +740,7 @@ TRIM (
 | 9 | Courbe | `order_date` par `[Revenue]`, légende Top 5 `Employee Name` | Comment évoluent les meilleurs employés ? |
 | 10 | Matrice | Store → Employee avec Orders, Revenue, AOV et Rank | Comment la performance se répartit-elle dans les magasins ? |
 | 11 | Heatmap | `Employee Name` × `category` avec `[Revenue]` | Quelles sont les spécialités produit ? |
-| 12 | Scatter plot | X `salary`, Y `[Revenue]`, taille `[Orders]`, détail `Employee Name` | Existe-t-il une relation entre salaire, charge et revenu ? |
+| 12 | Matrice | `store_name` → `Employee Name`, colonnes `[Orders]`, `[Revenue]` et `[Average Order Value]` | La charge est-elle équilibrée dans chaque magasin ? |
 
 ### Analyses avancées
 
@@ -671,7 +749,8 @@ TRIM (
 - utiliser `[Employee Revenue Contribution %]` pour mesurer la concentration ;
 - repérer les employés à fort volume mais faible panier moyen ;
 - repérer les employés à faible volume mais forte valeur ;
-- ne pas interpréter le revenu comme une mesure complète de performance RH sans objectifs, ancienneté et heures travaillées.
+- ne pas interpréter le revenu comme une mesure complète de performance RH sans objectifs, ancienneté et heures travaillées ;
+- ne pas présenter les affectations historiques reconstruites comme des observations réelles.
 
 ---
 
@@ -697,6 +776,28 @@ Employee Completeness % =
 ```
 
 ```DAX
+Employee Dimension Blank Keys =
+COUNTBLANK ( dim_employees[employee_id] )
+```
+
+```DAX
+Employee Dimension Duplicate Keys =
+COUNTROWS ( dim_employees )
+    - DISTINCTCOUNT ( dim_employees[employee_id] )
+```
+
+```DAX
+Employee Orphan Fact Rows =
+COUNTROWS (
+    FILTER (
+        fact_orders,
+        NOT ISBLANK ( fact_orders[employee_id] )
+            && ISBLANK ( RELATED ( dim_employees[employee_id] ) )
+    )
+)
+```
+
+```DAX
 Employee Store Mismatch Rows =
 COUNTROWS (
     FILTER (
@@ -715,16 +816,17 @@ Duplicate Order Item Check =
 
 | N° | Visuel | Attendu |
 |---:|---|---|
-| 1 | Carte | Latest Order Timestamp |
-| 2 | Carte | Order Lines |
-| 3 | Carte | Orders |
-| 4 | Carte | Duplicate Order Item Check = 0 |
-| 5 | Carte | Employee Completeness % = 100 % |
-| 6 | Carte | Orders Without Employee = 0 |
-| 7 | Carte | Employee Store Mismatch Rows = 0 |
-| 8 | Tableau | Commandes dont le total ne correspond pas aux lignes |
-| 9 | Barres | Lignes par `processed_at` ou date de traitement |
-| 10 | Tableau | Valeurs nulles par colonne critique |
+| 1 | Carte | Latest Order Timestamp récent |
+| 2 | Carte | Duplicate Order Item Check = 0 |
+| 3 | Carte | Employee Completeness % = 100 % |
+| 4 | Carte | Orders Without Employee = 0 |
+| 5 | Carte | Employee Dimension Blank Keys = 0 |
+| 6 | Carte | Employee Dimension Duplicate Keys = 0 |
+| 7 | Carte | Employee Orphan Fact Rows = 0 |
+| 8 | Carte | Employee Store Mismatch Rows = 0 |
+| 9 | Tableau | Commandes dont le total ne correspond pas aux lignes |
+| 10 | Barres | Lignes par `processed_at` ou date de traitement |
+| 11 | Tableau | Valeurs nulles par colonne critique |
 
 ### Règles de qualité
 
@@ -850,7 +952,8 @@ Trends → Products → Stores → Customers → Orders → Advanced
 - vérifier la relation active `dim_employees 1 → * fact_orders` ;
 - vérifier `Employee Completeness % = 100 %` ;
 - vérifier `Employee Store Mismatch Rows = 0` ;
-- construire les visuels sur tout l’historique ;
+- construire les visuels sur tout le dataset ;
+- afficher le bandeau de transparence sur le backfill historique ;
 - tester les filtres Store, Date, Job Title et Employee.
 
 ### Étape 6 — Qualité
@@ -912,4 +1015,4 @@ Le rapport final contient neuf pages complémentaires :
 09 — Data Quality & Pipeline Monitoring
 ```
 
-Cette répartition couvre les combinaisons métier utiles entre dates, commandes, clients, produits, magasins, paiements et employés. Les employés participent désormais au modèle en étoile sur tout l’historique, avec une clé complète, une relation `1:*` et une cohérence employé–magasin contrôlée.
+Cette répartition couvre les combinaisons métier utiles entre dates, commandes, clients, produits, magasins, paiements et employés. La relation Employé–Fact est complète et cohérente avec les magasins. Le rapport distingue explicitement cette complétude technique des affectations historiques reconstruites pour la démonstration.
