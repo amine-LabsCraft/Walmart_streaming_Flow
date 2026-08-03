@@ -1,0 +1,63 @@
+\chapter{Contexte général et étude de l'existant}
+
+\section{Cadre du projet}
+Le projet est développé par Amine Ait Ali dans un cadre actuellement identifié comme pédagogique et de portfolio. Les informations relatives à l'établissement, à la structure d'accueil et à la durée officielle n'apparaissent pas dans le dépôt ; elles sont donc signalées dans la section finale des informations manquantes. Cette précaution évite d'attribuer au projet un contexte professionnel non démontré.
+
+Le domaine simulé est celui d'une chaîne de magasins. La plateforme ne cherche pas à reproduire un système de production Walmart réel. Elle fournit un environnement contrôlé permettant de travailler des compétences de Data Engineering : modélisation relationnelle, génération de données, ingestion incrémentale, lakehouse, tests dbt, orchestration et Business Intelligence.
+
+\section{État initial et évolution du besoin}
+L'existant comprenait déjà un pipeline stable capable d'extraire les changements d'une base PostgreSQL et de construire des tables analytiques dans Databricks. Le besoin n'était donc pas de réécrire la chaîne, mais de rendre la source vivante. Le générateur devait créer peu d'événements, initialement une commande par minute puis finalement une commande complète toutes les dix secondes, tout en laissant le traitement Airflow à fréquence horaire.
+
+Cette séparation des rythmes est structurante. Le débit source montre une activité continue à l'utilisateur. Le micro-batch horaire concentre les calculs et limite les coûts de traitement. Une ligne créée à l'instant \(t\) reste visible dans PostgreSQL immédiatement, puis devient visible en Gold après le prochain passage réussi du DAG et le rafraîchissement Power BI. Le système est donc \emph{streaming côté génération}, mais \emph{micro-batch côté analytique}. L'expression « streaming flow » décrit ici la continuité des événements, pas un engagement de latence sub-seconde de bout en bout.
+
+\section{Panorama des technologies}
+
+\subsection{PostgreSQL et service Ghost}
+La base PostgreSQL externe est fournie par un service managé Ghost. Elle constitue la source opérationnelle de vérité. Les six tables du schéma \tech{raw} sont \tech{customers}, \tech{employees}, \tech{stores}, \tech{products}, \tech{orders} et \tech{order\_items}. PostgreSQL offre transactions, contraintes, séquences, déclencheurs et verrous consultatifs. Ces derniers conviennent à la sérialisation de courtes sections critiques applicatives sans verrouiller arbitrairement des tables entières \cite{postgres-locks}.
+
+Les secrets de connexion sont injectés par variables d'environnement et ne doivent jamais être copiés dans le code, les captures ou le rapport. La clé d'API et la chaîne PostgreSQL reçues durant le développement sont volontairement absentes de ce document.
+
+\subsection{Python et Flask}
+Python implémente la logique de génération. Flask expose une interface locale \emph{Order Pulse}, accessible sur le premier port libre compris entre 5050 et 5099. La page permet de démarrer ou d'arrêter une production continue et de déclencher individuellement les événements. La génération des champs clients est automatique : l'utilisateur n'a pas à saisir manuellement une identité à chaque inscription.
+
+\subsection{Databricks et Delta Lake}
+Databricks fournit le moteur de calcul et l'espace lakehouse. Les tables Delta combinent un stockage analytique avec des opérations transactionnelles, un schéma contrôlé et des mises à jour de type \tech{MERGE}. Dans le projet, le catalogue logique s'appelle \tech{walmart}, avec des schémas correspondant aux couches Bronze, Silver et Gold. La documentation Databricks présente le lakehouse comme l'association de propriétés de lac de données et d'entrepôt, notamment pour partager une source analytique cohérente \cite{databricks-lakehouse}.
+
+\subsection{dbt}
+dbt transforme les sources Bronze par du SQL versionné. Les dépendances sont exprimées à l'aide de \tech{source()} et \tech{ref()}, ce qui forme un graphe de lignage. Le dépôt contient treize modèles, cinq snapshots et cent sept tests de données au moment de l'analyse. Les modèles Silver techniques sont incrémentaux ; les tables de dimensions utilisent des snapshots horodatés afin de conserver les versions historiques. dbt décrit les snapshots comme une mise en oeuvre des dimensions à variation lente de type 2 \cite{dbt-snapshots}.
+
+\subsection{Apache Airflow et Docker}
+Airflow orchestre le pipeline dans Docker Compose. La configuration utilise Airflow 3.2.2 avec CeleryExecutor, Redis comme courtier, PostgreSQL pour les métadonnées et des composants distincts pour l'API, l'ordonnanceur, le processeur de DAG et le worker. Un DAG représente un workflow dont les tâches et dépendances imposent l'ordre d'exécution \cite{airflow-overview}. L'ordonnanceur déclenche les tâches prêtes lorsque leurs dépendances sont satisfaites \cite{airflow-scheduler}.
+
+\subsection{Power BI}
+Power BI consomme les tables Gold. Son modèle s'appuie sur une table de faits centrale et cinq dimensions. Microsoft recommande le schéma en étoile pour séparer les tables utilisées pour filtrer et regrouper des tables utilisées pour agréger \cite{powerbi-star}. Cette règle rend les mesures plus prévisibles et limite les ambiguïtés de filtrage.
+
+\begin{table}[htbp]
+\centering
+\caption{Rôle des technologies dans la solution}
+\label{tab:technologies}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3cm}X X}
+\toprule
+Technologie & Rôle principal & Élément vérifiable dans le dépôt \\
+\midrule
+PostgreSQL & Source OLTP et intégrité transactionnelle & Schéma \tech{raw}, triggers, séquences et clés \\
+Flask/Python & Génération d'événements et interface locale & Application \emph{Order Pulse} \\
+Databricks & Calcul et stockage Delta & Job distant et catalogue \tech{walmart} \\
+dbt & Transformation, snapshots, tests et lignage & 13 modèles, 5 snapshots, 107 tests \\
+Airflow & Orchestration horaire & DAG \tech{orchestrate} de 11 tâches \\
+Docker & Reproductibilité locale de l'orchestrateur & Image Airflow et fichier Compose \\
+Power BI & Modèle sémantique et visualisation & Relations étoile et mesures DAX \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Analyse critique de l'existant}
+L'existant présente plusieurs points forts. Les responsabilités sont séparées : le générateur écrit uniquement dans la source ; Airflow orchestre ; Databricks calcule ; dbt transforme et teste ; Power BI visualise. Le pipeline horaire n'est pas couplé aux clics de l'interface. Les couches permettent d'isoler les erreurs et de rejouer une transformation sans régénérer les événements.
+
+Les difficultés observées concernent surtout le grain et l'historique. Les anciennes commandes ne possédaient pas toujours d'employé, alors que les nouvelles respectaient cette relation. Une correction a affecté aux commandes historiques un employé actif du même magasin, ce qui a permis de relier \tech{dim\_employees} à \tech{fact\_orders}. Une autre anomalie a révélé que \tech{dim\_orders.order\_item\_id} restait nul pour les commandes générées. La correction n'a pas ajouté une colonne plurielle ; elle a rétabli l'unique colonne \tech{order\_item\_id} et choisi, pour une dimension au grain commande, la première ligne selon l'identifiant minimal. Ces épisodes montrent pourquoi le grain doit être documenté et testé explicitement.
+
+\section{Positionnement de la solution}
+Trois options d'évolution pouvaient être considérées : réécriture vers un bus d'événements temps réel, simulation par fichiers, ou ajout d'un producteur directement connecté à la source existante. La troisième a été retenue. Elle minimise l'impact sur un pipeline opérationnel et offre une démonstration compréhensible. Le compromis est une latence analytique pouvant approcher une heure, à laquelle s'ajoute le délai de rafraîchissement Power BI.
+
+La solution ne constitue donc pas encore une plateforme de streaming analytique stricte. Elle constitue un système hybride pertinent pour un PFE : événements continus en entrée, traitement incrémental et périodique en aval. Une évolution future vers Kafka ou Redpanda pourrait conserver les contrats métier tout en remplaçant progressivement l'ingestion.
+

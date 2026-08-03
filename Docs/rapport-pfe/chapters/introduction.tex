@@ -1,0 +1,41 @@
+\chapter*{Introduction générale}
+\addcontentsline{toc}{chapter}{Introduction générale}
+
+\section*{Contexte et motivation}
+Les systèmes de vente au détail produisent des données à des rythmes différents : inscriptions de clients, commandes, lignes de commande, mises à jour d'états, informations de produits et organisation des magasins. Ces données prennent une valeur décisionnelle lorsqu'elles sont fiables, historisées et structurées pour répondre rapidement à des questions telles que : quel est le chiffre d'affaires par période ? quels produits contribuent le plus aux ventes ? quelle est la valeur moyenne d'une commande ? comment évolue la performance des magasins ?
+
+Une difficulté récurrente réside dans le passage d'une base opérationnelle mutable vers un modèle analytique stable. Une simple copie complète est facile à comprendre, mais coûteuse, peu réactive et fragile à mesure que le volume croît. À l'inverse, un système intégralement événementiel ou temps réel peut accroître fortement la complexité d'exploitation. Le présent projet étudie une position intermédiaire : la source change continuellement, tandis que le traitement analytique reste incrémental, contrôlé et exécuté toutes les heures.
+
+\emph{Walmart Streaming Flow} est un projet pédagogique et de portfolio, sans affiliation à Walmart Inc. Il reproduit un domaine retail cohérent à l'aide de données synthétiques. Le système est conçu comme une chaîne complète : génération d'événements, persistance OLTP dans PostgreSQL, ingestion dans Databricks, transformations dbt selon une architecture médaillon, orchestration Apache Airflow et consommation dans Power BI.
+
+\section*{Problématique}
+La problématique centrale peut être formulée ainsi :
+
+\keypoint{Comment injecter de nouveaux événements métier cohérents dans une base PostgreSQL, puis les propager de manière incrémentale et vérifiable jusqu'à un schéma en étoile Power BI, tout en conservant un pipeline horaire existant et sans rompre son modèle métier ?}
+
+Cette question implique plusieurs sous-problèmes. Le générateur doit éviter les commandes orphelines et garantir qu'un employé est actif dans le magasin de la commande. L'ingestion doit distinguer les lignes nouvelles ou modifiées de celles déjà traitées. Les transformations doivent séparer données brutes, données conformées et données décisionnelles. Enfin, la couche Gold doit conserver un grain explicite afin que les agrégations Power BI ne multiplient pas artificiellement les montants.
+
+\section*{Objectifs}
+L'objectif général consiste à réaliser une plateforme démontrant un flux de données retail de bout en bout, reproductible sur un poste de développement et exploitable dans un tableau de bord. Les objectifs spécifiques sont les suivants :
+
+\begin{itemize}[leftmargin=1.1cm]
+  \item générer automatiquement un nouveau client ou une commande complète depuis une interface web ;
+  \item respecter les relations entre clients, employés, magasins, produits, commandes et lignes ;
+  \item sécuriser l'écriture d'une commande par une transaction atomique ;
+  \item détecter les ajouts et modifications à l'aide d'une version de changement ;
+  \item organiser le lakehouse en couches Bronze, Silver et Gold ;
+  \item historiser les dimensions mutables par des snapshots dbt de type SCD 2 ;
+  \item construire une table de faits au grain de la ligne de commande ;
+  \item automatiser l'ordre d'exécution et les contrôles avec Airflow ;
+  \item fournir un modèle Power BI lisible, composé de relations un-à-plusieurs ;
+  \item documenter les limites et les évolutions envisageables vers une architecture plus temps réel.
+\end{itemize}
+
+\section*{Démarche adoptée}
+Nous avons suivi une démarche itérative et incrémentale. Une première version fonctionnelle du pipeline horaire a servi de référence stable. Le générateur a ensuite été ajouté uniquement au niveau de la source. Chaque évolution a été vérifiée verticalement : validité dans PostgreSQL, présence en Bronze, conformité en Silver, disponibilité en Gold et cohérence du modèle Power BI. Cette façon de procéder réduit le risque de masquer une anomalie derrière plusieurs couches.
+
+Les décisions sont guidées par quatre principes : préserver l'existant fonctionnel, préférer les contrats explicites, rendre les traitements rejouables et tester au même grain que les règles métier. La documentation officielle des technologies complète l'observation du dépôt. Les recommandations Databricks décrivent notamment une progression Bronze--Silver--Gold où la qualité s'accroît couche après couche \cite{databricks-medallion}. dbt formalise le traitement des enregistrements nouveaux ou modifiés dans ses modèles incrémentaux \cite{dbt-incremental}.
+
+\section*{Organisation du rapport}
+Le premier chapitre présente le contexte, l'existant et les technologies. Le deuxième formalise les besoins et les contraintes. Le troisième décrit la conception des données, des traitements et du modèle décisionnel. Le quatrième expose la réalisation concrète. Le cinquième détaille les tests, les résultats et les limites. La conclusion synthétise les apports et propose des perspectives. Des annexes fournissent les commandes de démarrage, les règles de calcul Power BI et une matrice de contrôle.
+

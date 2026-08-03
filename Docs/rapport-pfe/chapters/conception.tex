@@ -1,0 +1,115 @@
+\chapter{Conception de la solution}
+
+\section{Architecture globale}
+La solution sépare clairement le plan opérationnel, le plan de traitement et le plan de consommation. Le générateur Flask écrit exclusivement dans PostgreSQL. Airflow pilote un job Databricks et les commandes dbt. Les tables Delta organisent les données selon trois niveaux de confiance, puis Power BI consomme uniquement la couche Gold. Cette séparation empêche un clic dans l'interface de devenir dépendant d'un traitement analytique long.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[box/.style={rounded corners,draw=walmartnavy,thick,minimum width=2.4cm,minimum height=1.15cm,align=center},flow/.style={-{Latex[length=3mm]},very thick,walmartblue},ctl/.style={-{Latex[length=2.5mm]},dashed,thick,codepurple}]
+\node[box,fill=softblue] (web) {Flask\\Générateur};
+\node[box,fill=softblue,right=.7cm of web] (pg) {Ghost\\PostgreSQL};
+\node[box,fill=orange!15,right=1cm of pg] (br) {Delta\\Bronze};
+\node[box,fill=gray!12,right=.5cm of br] (si) {dbt\\Silver};
+\node[box,fill=walmartyellow!25,right=.5cm of si] (go) {dbt\\Gold};
+\node[box,fill=yellow!10,right=.8cm of go] (bi) {Power BI\\Dashboard};
+\node[box,fill=codepurple!10,below=1.3cm of si,minimum width=4.8cm] (air) {Docker + Airflow\\DAG horaire, 11 tâches};
+\draw[flow] (web)--(pg); \draw[flow] (pg)--(br); \draw[flow] (br)--(si); \draw[flow] (si)--(go); \draw[flow] (go)--(bi);
+\draw[ctl] (air)--(br); \draw[ctl] (air)--(si); \draw[ctl] (air)--(go);
+\end{tikzpicture}}
+\caption{Architecture fonctionnelle de bout en bout}
+\label{fig:architecture}
+\end{figure}
+
+La génération est continue, alors que le calcul reste micro-batch. Databricks recommande une progression Bronze--Silver--Gold dans laquelle la qualité et la valeur métier augmentent à chaque couche \cite{databricks-medallion}. Ce modèle répond au besoin de préserver un pipeline horaire stable tout en rendant la source dynamique.
+
+\section{Modèle relationnel de la source}
+La base source contient six entités. Un client passe plusieurs commandes. Un magasin possède plusieurs employés et reçoit plusieurs commandes. Une commande est traitée par un employé du même magasin. Une commande contient une à cinq lignes, et chaque ligne référence un produit.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{.96\textwidth}{!}{%
+\begin{tikzpicture}[entity/.style={rounded corners,draw=walmartnavy,thick,minimum width=3.1cm,minimum height=1cm,align=center},rel/.style={-{Latex[length=2.5mm]},thick,walmartblue}]
+\node[entity] (c) {\textbf{customers}\\PK customer\_id};
+\node[entity,right=2.6cm of c] (o) {\textbf{orders}\\PK order\_id\\FK customer/store/employee};
+\node[entity,right=2.6cm of o] (i) {\textbf{order\_items}\\PK order\_item\_id\\FK order/product};
+\node[entity,below=1.8cm of c] (s) {\textbf{stores}\\PK store\_id};
+\node[entity,right=2.6cm of s] (e) {\textbf{employees}\\PK employee\_id\\FK store\_id};
+\node[entity,right=2.6cm of e] (p) {\textbf{products}\\PK product\_id};
+\draw[rel] (c)-- node[above,font=\scriptsize]{1:N} (o); \draw[rel] (o)-- node[above,font=\scriptsize]{1:N} (i);
+\draw[rel] (s)-- node[below,font=\scriptsize]{1:N} (e); \draw[rel] (e)-- node[right,font=\scriptsize]{1:N} (o);
+\draw[rel] (s) to[bend right=20] (o); \draw[rel] (p) to[bend left=20] (i);
+\end{tikzpicture}}
+\caption{Relations métier de PostgreSQL}
+\label{fig:source-model}
+\end{figure}
+
+Les tables \tech{orders} et \tech{order\_items} portent un \tech{change\_version} alimenté par une séquence et un trigger. La valeur croissante sert de curseur d'extraction. Elle évite les ambiguïtés d'un timestamp seul et permet de récupérer les insertions comme les mises à jour.
+
+\section{Transaction de commande}
+Une commande et ses lignes forment un agrégat atomique. Le générateur ouvre une transaction, acquiert un verrou consultatif, sélectionne des références actives, calcule les montants, insère l'en-tête et les lignes, puis valide. Une exception provoque un rollback complet. PostgreSQL fournit des verrous consultatifs adaptés aux sections critiques applicatives \cite{postgres-locks}.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{.9\textwidth}{!}{%
+\begin{tikzpicture}[life/.style={draw=walmartnavy,fill=softblue,minimum width=2.5cm,minimum height=.75cm,align=center},msg/.style={-{Latex[length=2.5mm]},thick,walmartblue}]
+\node[life] (u) {Interface}; \node[life,right=2.4cm of u] (g) {Générateur}; \node[life,right=2.4cm of g] (d) {PostgreSQL};
+\draw[dashed] (u.south)--++(0,-5.4); \draw[dashed] (g.south)--++(0,-5.4); \draw[dashed] (d.south)--++(0,-5.4);
+\draw[msg] ([yshift=-.8cm]u.south)--node[above,font=\scriptsize]{Créer}([yshift=-.8cm]g.south);
+\draw[msg] ([yshift=-1.8cm]g.south)--node[above,font=\scriptsize]{BEGIN + verrou}([yshift=-1.8cm]d.south);
+\draw[msg] ([yshift=-2.8cm]g.south)--node[above,font=\scriptsize]{Lire clés actives}([yshift=-2.8cm]d.south);
+\draw[msg] ([yshift=-3.8cm]g.south)--node[above,font=\scriptsize]{INSERT order + items}([yshift=-3.8cm]d.south);
+\draw[msg] ([yshift=-4.8cm]d.south)--node[above,font=\scriptsize]{COMMIT / erreur}([yshift=-4.8cm]g.south);
+\end{tikzpicture}}
+\caption{Séquence transactionnelle d'une commande}
+\label{fig:sequence-order}
+\end{figure}
+
+La variabilité reste contrôlée. Le client est tiré parmi les clients actifs ; le magasin parmi les magasins actifs ; l'employé parmi les employés actifs de ce magasin. Cette sélection conditionnelle évite l'erreur logique d'un identifiant inexistant ou d'un employé affecté ailleurs. Le service tente aussi de ne pas répéter immédiatement le dernier client et le dernier magasin.
+
+\section{Couches Silver et Gold}
+Les six modèles Silver techniques sont incrémentaux, avec une clé unique et une stratégie \tech{merge}. Lors du premier lancement, toutes les lignes sont transformées. Ensuite, \tech{is\_incremental()} restreint la lecture aux versions nouvelles. dbt indique qu'une clé unique permet de mettre à jour une ligne existante au lieu de la dupliquer \cite{dbt-incremental}.
+
+Silver métier matérialise \tech{obt\_b}, une vue dénormalisée au grain ligne de commande. Elle réunit le contexte client, produit, magasin et employé. Gold expose cinq dimensions historisées et une table de faits. Les snapshots dbt implémentent des dimensions à variation lente de type 2 \cite{dbt-snapshots}.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{.9\textwidth}{!}{%
+\begin{tikzpicture}[fact/.style={rounded corners,draw=walmartblue,very thick,fill=softblue,minimum width=4cm,minimum height=2.5cm,align=center},dim/.style={rounded corners,draw=walmartnavy,thick,minimum width=3.2cm,minimum height=1cm,align=center},rel/.style={-{Latex[length=2.4mm]},thick,walmartblue}]
+\node[fact] (f) {\textbf{fact\_orders}\\grain : order\_item\_id\\sales\_amount, quantity};
+\node[dim,above=1.7cm of f] (o) {dim\_orders\\order\_id};
+\node[dim,left=2.7cm of f] (c) {dim\_customers}; \node[dim,right=2.7cm of f] (p) {dim\_products};
+\node[dim,below left=1.7cm and 2.7cm of f] (s) {dim\_stores}; \node[dim,below right=1.7cm and 2.7cm of f] (e) {dim\_employees};
+\draw[rel] (o)--(f); \draw[rel] (c)--(f); \draw[rel] (p)--(f); \draw[rel] (s)--(f); \draw[rel] (e)--(f);
+\end{tikzpicture}}
+\caption{Schéma en étoile de la couche Gold}
+\label{fig:star-schema}
+\end{figure}
+
+Le fait possède une ligne par \tech{order\_item\_id}. \tech{sales\_amount} est additive. \tech{order\_total\_amount} est répété pour chaque ligne et ne doit pas être additionné dans Power BI. La dimension commande conserve une ligne par \tech{order\_id}. Sa colonne \tech{order\_item\_id} reçoit de manière déterministe l'identifiant minimal des lignes de la commande. Elle sert à la traçabilité ; l'analyse détaillée utilise le fait.
+
+\section{Orchestration}
+Le DAG \tech{orchestrate}, planifié avec \tech{@hourly} et \tech{catchup=False}, exécute onze tâches. Les tests placés entre les couches sont des portes de qualité : une défaillance bloque la publication aval. Airflow représente le workflow comme un DAG et exécute les tâches lorsque leurs dépendances sont satisfaites \cite{airflow-overview,airflow-scheduler}.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[task/.style={rounded corners,draw=walmartnavy,fill=softblue,minimum width=2.1cm,minimum height=.75cm,align=center,font=\scriptsize},arr/.style={-{Latex[length=2mm]},thick,walmartblue}]
+\node[task] (a) {ingest\\cdc}; \node[task,right=.25cm of a] (b) {clean\\target}; \node[task,right=.25cm of b] (c) {source\\freshness}; \node[task,right=.25cm of c] (d) {silver\\technical}; \node[task,right=.25cm of d] (e) {tests\\technical};
+\node[task,below=1cm of e] (f) {silver\\business}; \node[task,left=.25cm of f] (g) {tests\\business}; \node[task,left=.25cm of g] (h) {gold\\ephemeral}; \node[task,left=.25cm of h] (i) {gold\\dimensions}; \node[task,left=.25cm of i] (j) {gold\\facts}; \node[task,left=.25cm of j] (k) {tests\\facts};
+\draw[arr] (a)--(b); \draw[arr] (b)--(c); \draw[arr] (c)--(d); \draw[arr] (d)--(e); \draw[arr] (e)--(f); \draw[arr] (f)--(g); \draw[arr] (g)--(h); \draw[arr] (h)--(i); \draw[arr] (i)--(j); \draw[arr] (j)--(k);
+\end{tikzpicture}}
+\caption{Ordre des onze tâches Airflow}
+\label{fig:airflow-dag}
+\end{figure}
+
+\section{Modèle Power BI}
+Power BI importe les versions courantes des dimensions et \tech{fact\_orders}. Les relations sont actives, de cardinalité 1:N, et filtrent de la dimension vers le fait. Cette conception correspond aux recommandations Microsoft : les dimensions filtrent et regroupent, tandis que le fait porte les observations numériques \cite{powerbi-star}.
+
+La table de sauvegarde \tech{dim\_orders\_backup\_pre\_grain\_fix\_20260730} est exclue du modèle. Elle n'est pas une dimension fonctionnelle et introduirait des relations ambiguës. La relation employés--fait est désormais valide grâce au traitement de l'historique. Une éventuelle relation magasin--employé ne doit pas créer un second chemin actif vers le fait.
+
+\section{Sécurité et résilience}
+Les secrets sont injectés par l'environnement et ne sont jamais reproduits dans le dépôt. L'interface écoute sur \tech{127.0.0.1}. En production, il faudrait ajouter un coffre de secrets, des comptes de service au moindre privilège et une authentification de l'interface.
+
+La résilience repose sur trois mécanismes : rollback à la source, incréments rejouables et tâches Airflow indépendantes. Les journaux du générateur, d'Airflow, de dbt et de Databricks forment une chaîne d'observation. Une évolution future pourra centraliser les métriques de volumes, latence et erreurs.
+

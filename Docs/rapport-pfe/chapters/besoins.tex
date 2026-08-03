@@ -1,0 +1,88 @@
+\chapter{Analyse et spécification des besoins}
+
+\section{Acteurs et périmètre}
+Le système distingue quatre acteurs logiques. L'opérateur du générateur déclenche les événements et surveille l'interface. L'ingénieur Data administre l'orchestration, les transformations et les tests. L'analyste BI construit les mesures et les pages du rapport. Le décideur consulte les indicateurs. Un même utilisateur peut cumuler ces rôles dans le contexte pédagogique.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+actor/.style={circle,draw=walmartnavy,fill=softblue,minimum size=1.3cm,align=center,font=\small\bfseries},
+use/.style={rectangle,rounded corners=3pt,draw=walmartblue,fill=white,minimum width=4.2cm,minimum height=0.8cm,align=center},
+arr/.style={-{Latex[length=2.5mm]},thick,walmartnavy}]
+\node[actor] (op) {Opérateur};
+\node[actor,below=2.1cm of op] (de) {Ingénieur\\Data};
+\node[actor,right=13cm of op] (bi) {Analyste BI};
+\node[actor,below=2.1cm of bi] (dec) {Décideur};
+\node[use,right=3.4cm of op] (u1) {Déclencher un client};
+\node[use,right=3.4cm of u1] (u2) {Déclencher une commande};
+\node[use,right=3.4cm of de] (u3) {Orchestrer et contrôler};
+\node[use,right=3.4cm of u3] (u4) {Analyser les indicateurs};
+\draw[arr] (op)--(u1); \draw[arr] (op)--(u2);
+\draw[arr] (de)--(u3); \draw[arr] (bi)--(u4); \draw[arr] (dec)--(u4);
+\draw[arr,dashed] (u1)--(u3); \draw[arr,dashed] (u2)--(u3); \draw[arr,dashed] (u3)--(u4);
+\end{tikzpicture}}
+\caption{Cas d'utilisation majeurs}
+\label{fig:usecases}
+\end{figure}
+
+\section{Besoins fonctionnels}
+\subsection{Génération d'un client}
+L'interface doit permettre de déclencher un événement d'inscription sans formulaire détaillé. Le service produit automatiquement un identifiant unique, un prénom, un nom, une adresse électronique, un téléphone, une ville et un pays cohérents avec le jeu de données. Une fois persisté, ce client devient éligible à la sélection aléatoire lors des commandes suivantes. Cette règle montre que deux types d'événements peuvent interagir sans saisie manuelle.
+
+\subsection{Génération d'une commande}
+Une commande doit référencer un client actif existant, un magasin actif et un employé actif appartenant à ce même magasin. Elle contient de une à cinq lignes, chacune portant un produit actif, une quantité comprise entre un et cinq, un prix unitaire et un montant de ligne calculé. Le total de commande est la somme des lignes. Le paiement et l'état proviennent de domaines autorisés.
+
+La diversité est recherchée sans sacrifier la cohérence. Le client, le magasin, l'employé et les produits varient. Lorsque plusieurs magasins sont disponibles, l'algorithme évite autant que possible de sélectionner immédiatement le même magasin. De même, il tente de ne pas répéter le dernier client. Il ne s'agit pas d'une garantie statistique d'uniformité, mais d'une amélioration de la variété visible.
+
+\subsection{Contrôle du générateur}
+L'utilisateur doit pouvoir démarrer et arrêter la boucle, régler l'intervalle entre deux commandes dans les limites prévues, lancer un événement unitaire et consulter un journal succinct. Le port d'écoute doit éviter les collisions locales en recherchant un port libre dans la plage 5050--5099. Le serveur reste lié à l'interface locale pour réduire l'exposition accidentelle.
+
+\subsection{Propagation analytique}
+Les changements nouveaux ou modifiés doivent être chargés en Bronze, conformés en Silver et publiés en Gold. L'ordre des étapes doit être automatique et l'échec d'un contrôle doit empêcher une publication incohérente. Power BI doit pouvoir importer ou interroger les dimensions actuelles et la table de faits.
+
+\section{Besoins non fonctionnels}
+\begin{table}[htbp]
+\centering
+\caption{Exigences non fonctionnelles}
+\label{tab:nfr}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.2cm}X p{4.2cm}}
+\toprule
+Qualité & Exigence & Mécanisme retenu \\
+\midrule
+Intégrité & Aucune commande ne doit référencer une entité inexistante & Sélection de clés actives, FK et transaction \\
+Atomicité & Une commande et ses lignes sont validées ensemble & Une transaction avec annulation en cas d'erreur \\
+Idempotence & Un rejeu ne doit pas multiplier les lignes & Clé unique et stratégie incrémentale \tech{merge} \\
+Traçabilité & Les changements et périodes de validité sont observables & \tech{change\_version}, timestamps et snapshots \\
+Testabilité & Les règles critiques doivent être exécutables & Tests dbt génériques et personnalisés \\
+Sécurité & Aucun secret ne doit être commité ou exposé & Variables d'environnement et exemples anonymisés \\
+Maintenabilité & Le pipeline existant doit rester stable & Ajout limité à la source et contrats de colonnes \\
+Utilisabilité & Le générateur doit être utilisable sans SQL & Interface Flask simple et actions explicites \\
+Performance & Éviter les recalculs complets réguliers & Filtres incrémentaux et traitement horaire \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Contraintes et hypothèses}
+Le service PostgreSQL, le workspace Databricks et Power BI sont externes au réseau Docker local. Leur disponibilité dépend du réseau et des quotas associés. Les identifiants techniques doivent être fournis à l'exécution. L'orchestration Airflow s'exécute dans des conteneurs Linux, tandis que le générateur est lancé sur l'hôte Windows.
+
+Les données sont synthétiques. Elles permettent de valider la logique, mais ne garantissent pas une distribution réaliste de la demande, des saisons, des promotions ou des comportements clients. Les dates historiques du jeu initial et les événements générés doivent être interprétés comme un laboratoire et non comme des ventes réelles.
+
+\section{Règles métier consolidées}
+\begin{enumerate}[leftmargin=1.1cm]
+  \item Un client peut passer plusieurs commandes ; une commande appartient à un seul client.
+  \item Un magasin emploie plusieurs employés ; l'employé choisi pour une commande doit appartenir à ce magasin.
+  \item Une commande possède au moins une ligne ; une ligne appartient à une seule commande.
+  \item Une ligne référence un seul produit et contient une quantité strictement positive.
+  \item Le montant de ligne vaut \(q \times p\), où \(q\) est la quantité et \(p\) le prix unitaire, sous réserve des règles d'arrondi.
+  \item Le total de commande vaut la somme de ses lignes.
+  \item Une dimension historisée peut contenir plusieurs versions techniques d'un même identifiant métier, mais une seule version courante.
+  \item La table de faits contient une ligne par \tech{order\_item\_id}; le montant de vente agrégable est \tech{sales\_amount}.
+  \item \tech{order\_total\_amount} est répété sur les lignes d'une commande et ne doit jamais être additionné directement dans Power BI.
+  \item Dans \tech{dim\_orders}, \tech{order\_item\_id} désigne la première ligne de la commande, choisie de manière déterministe ; il ne change pas le grain commande de la dimension.
+\end{enumerate}
+
+\section{Critères d'acceptation}
+Le système est accepté si un client créé apparaît dans la dimension client après exécution, si une commande et toutes ses lignes apparaissent dans la table de faits, si les clés de dimensions trouvent une correspondance, si aucun \tech{order\_item\_id} généré n'est nul dans les tables attendues, et si les tests dbt ciblés réussissent. Le rapport Power BI doit ensuite afficher une variation mesurable après rafraîchissement, par exemple une augmentation du nombre de commandes et du chiffre d'affaires.
+
+

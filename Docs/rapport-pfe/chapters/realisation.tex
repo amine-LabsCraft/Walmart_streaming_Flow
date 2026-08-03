@@ -1,0 +1,164 @@
+\chapter{Réalisation et mise en oeuvre}
+
+\section{Organisation du projet}
+Le dépôt sépare l'orchestration dans \tech{airflow}, les transformations dans \tech{airflow}/\tech{walmart\_dbt}, le générateur dans le dossier du jeu Walmart et la documentation dans \tech{Docs}. Cette séparation rend les responsabilités visibles et facilite les changements ciblés.
+
+\begin{lstlisting}[language={},caption={Arborescence fonctionnelle simplifiée}]
+Walmart Streaming Flow/
+|-- airflow/
+|   |-- dags/orchestration.py
+|   |-- docker-compose.yaml
+|   `-- walmart_dbt/{models,snapshots,tests}
+|-- Walmart Data Engineering/Walmart dataset/
+|   |-- data/
+|   `-- templates/generator_index.html
+|-- Docs/
+`-- README.md
+\end{lstlisting}
+
+\section{Générateur web}
+Au démarrage, l'application charge les variables de connexion, vérifie PostgreSQL et recherche le premier port libre entre 5050 et 5099. La page \emph{Order Pulse} expose deux événements unitaires et une boucle continue. Le client est généré automatiquement ; l'utilisateur ne remplit pas une fiche à chaque essai.
+
+\begin{lstlisting}[language=Python,caption={Pseudocode de création cohérente d'une commande}]
+def build_order(connection):
+    with connection.transaction():
+        acquire_transaction_lock(connection)
+        customer = choose_active_customer(avoid=last_customer_id)
+        store = choose_active_store(avoid=last_store_id)
+        employee = choose_active_employee(store_id=store.id)
+        products = choose_active_products(random_between(1, 5))
+
+        lines = []
+        for product in products:
+            quantity = random_between(1, 5)
+            amount = round(quantity * product.price, 2)
+            lines.append((product.id, quantity, amount))
+
+        order_id = insert_order(customer, store, employee, lines)
+        insert_order_items(order_id, lines)
+        return order_id
+\end{lstlisting}
+
+Les requêtes sont paramétrées et le commit intervient après toutes les insertions. Le nouvel inscrit devient éligible lors des commandes suivantes parce que la liste des clients actifs est relue depuis la base. Le générateur ne déclenche ni Airflow ni dbt ; la fréquence analytique reste indépendante.
+
+\section{Marqueur de changement PostgreSQL}
+Une séquence et un trigger attribuent une version croissante aux commandes et lignes. Un trigger \tech{BEFORE} peut modifier la ligne avant son insertion ou sa mise à jour, ce qui convient à ce marqueur \cite{postgres-triggers}.
+
+\begin{lstlisting}[language=SQL,caption={Principe de change\_version}]
+CREATE SEQUENCE IF NOT EXISTS raw.change_version_seq;
+
+CREATE OR REPLACE FUNCTION raw.set_change_version()
+RETURNS trigger AS $$
+BEGIN
+  NEW.change_version := nextval('raw.change_version_seq');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER orders_change_version
+BEFORE INSERT OR UPDATE ON raw.orders
+FOR EACH ROW EXECUTE FUNCTION raw.set_change_version();
+\end{lstlisting}
+
+L'ajout de \tech{employee\_id} a nécessité une migration de l'historique. Plutôt que de supprimer les anciennes commandes, une règle les a associées à un employé actif du même magasin. Cette correction préserve les ventes historiques et rend possible la relation \tech{dim\_employees[employee\_id]} vers \tech{fact\_orders[employee\_id]}.
+
+\section{Modèles dbt incrémentaux}
+Le projet utilise dbt-core 1.11.12 et dbt-databricks 1.12.2. Les modèles Silver techniques suivent la structure suivante :
+
+\begin{lstlisting}[language=SQL,caption={Structure conceptuelle d'un modèle Silver}]
+{{ config(
+  materialized='incremental',
+  unique_key='order_id',
+  incremental_strategy='merge'
+) }}
+
+select order_id, employee_id, change_version, updated_at
+from {{ source('bronze', 'orders') }}
+{% if is_incremental() %}
+where change_version > (
+  select coalesce(max(change_version), 0) from {{ this }}
+)
+{% endif %}
+\end{lstlisting}
+
+La clé unique empêche le rejeu de produire des doublons. Une modification de schéma ou de logique historique peut toutefois nécessiter un \tech{--full-refresh}; dbt précise que ce mode reconstruit la table incrémentale entière \cite{dbt-incremental}.
+
+\tech{obt\_b} joint ensuite les six entités. Comme une commande possède plusieurs lignes, les colonnes d'en-tête sont répétées. Le modèle Gold doit donc distinguer les champs descriptifs des mesures réellement additives.
+
+\section{Snapshots et table de faits}
+Les dimensions clients, employés, commandes, produits et magasins utilisent une stratégie timestamp. Chaque version reçoit \tech{dbt\_valid\_from} et \tech{dbt\_valid\_to}. La date \tech{9999-12-31} représente la ligne courante.
+
+\begin{lstlisting}[language=SQL,caption={Snapshot SCD 2 conceptuel}]
+{% snapshot dim_customers %}
+{{ config(
+  unique_key='customer_id',
+  strategy='timestamp',
+  updated_at='customer_updated_at',
+  dbt_valid_to_current="to_timestamp('9999-12-31')"
+) }}
+select * from {{ ref('eph_customers') }}
+{% endsnapshot %}
+\end{lstlisting}
+
+La table de faits conserve toutes les lignes. Pour la dimension commande, une fenêtre sélectionne une valeur représentative sans créer de colonne plurielle :
+
+\begin{lstlisting}[language=SQL,caption={Correction de order\_item\_id dans dim\_orders}]
+with ranked as (
+  select order_id, order_item_id,
+         row_number() over (
+           partition by order_id order by order_item_id
+         ) as item_rank
+  from {{ ref('obt_b') }}
+)
+select order_id, order_item_id
+from ranked
+where item_rank = 1
+\end{lstlisting}
+
+Cette correction remplit les commandes générées d'identifiant supérieur à 10 000 et conserve le grain d'une ligne par commande. La colonne erronée \tech{order\_item\_ids} n'appartient pas au modèle final.
+
+\section{Orchestration Docker}
+Docker Compose démarre six services : serveur API Airflow, scheduler, processeur de DAG, worker Celery, Redis et PostgreSQL de métadonnées. L'image Airflow installe le SDK Databricks et dbt. Le DAG exécute exactement les étapes ingestion, nettoyage, fraîcheur, Silver technique, tests techniques, Silver métier, tests métier, éphémères Gold, dimensions, faits et tests des faits.
+
+\begin{lstlisting}[language=Python,caption={Topologie simplifiée du DAG}]
+ingest_cdc >> clean_target >> source_freshness
+source_freshness >> silver_technical >> silver_technical_tests
+silver_technical_tests >> silver_business >> silver_business_tests
+silver_business_tests >> gold_ephemeral >> gold_dimensions
+gold_dimensions >> gold_facts >> gold_facts_tests
+\end{lstlisting}
+
+Un échec bloque les tâches aval. Airflow porte l'état et les dépendances, tandis que le job Databricks réalise l'ingestion et dbt exécute les transformations.
+
+\section{Intégration Power BI}
+Power BI charge \tech{fact\_orders} et les cinq dimensions courantes. Les relations sont simples et unidirectionnelles. Les mesures de base sont :
+
+\begin{lstlisting}[language={},caption={Mesures DAX fondamentales}]
+Revenue = SUM ( fact_orders[sales_amount] )
+Orders = DISTINCTCOUNT ( fact_orders[order_id] )
+Items = SUM ( fact_orders[quantity] )
+Average Order Value = DIVIDE ( [Revenue], [Orders], 0 )
+\end{lstlisting}
+
+La somme de \tech{order\_total\_amount} est évitée parce que cette valeur est répétée au grain ligne. Les pages proposées sont : vue exécutive, tendances, produits, magasins, clients, commandes et paiements, analyses avancées, employés, puis qualité du pipeline.
+
+\begin{table}[htbp]
+\centering
+\caption{Pages Power BI et questions métier}
+\label{tab:powerbi-pages}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{4.2cm}X}
+\toprule
+Page & Question principale \\
+\midrule
+Vue exécutive & Quelle est la performance globale ? \\
+Tendances & Comment ventes et commandes évoluent-elles ? \\
+Produits & Quelles catégories contribuent le plus ? \\
+Magasins & Quelles implantations surperforment ? \\
+Clients & Quels segments sont fréquents et rentables ? \\
+Commandes & Quels statuts, paiements et paniers dominent ? \\
+Employés & Quelle activité est associée aux employés ? \\
+Qualité & Les données sont-elles fraîches et complètes ? \\
+\bottomrule
+\end{tabularx}
+\end{table}
+

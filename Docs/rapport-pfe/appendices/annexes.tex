@@ -1,0 +1,104 @@
+\chapter{Guide d'exécution et d'exploitation}
+
+\section{Prérequis et variables}
+Le poste doit disposer de Docker Desktop, Python 3.11 à 3.13, d'un accès à PostgreSQL Ghost et Databricks, ainsi que de Power BI Desktop. Les secrets sont fournis à l'exécution et ne sont pas reproduits dans ce document.
+
+\begin{table}[htbp]
+\centering
+\caption{Variables d'environnement attendues}
+\label{tab:env-vars}
+\small
+\begin{tabularx}{\textwidth}{>{\bfseries}p{5.2cm}X}
+\toprule
+Variable & Usage \\
+\midrule
+POSTGRES\_CONNECTION & Connexion TLS à PostgreSQL \\
+GHOST\_API\_KEY & Accès Ghost lorsqu'il est requis \\
+DATABRICKS\_HOST & Adresse du workspace \\
+DATABRICKS\_TOKEN & Jeton d'accès \\
+DATABRICKS\_JOB\_ID & Job déclenché par Airflow \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Commandes principales}
+Depuis le dossier \tech{airflow} :
+
+\begin{lstlisting}[language=bash,caption={Démarrage Docker}]
+docker compose build
+docker compose up -d
+docker compose ps
+\end{lstlisting}
+
+Le générateur est ensuite lancé depuis le dossier du jeu Walmart. Le port normal est \tech{http://127.0.0.1:5050}, avec recherche automatique jusqu'à 5099. Pour une démonstration : créer un client, créer une commande, relever les identifiants, déclencher le DAG si nécessaire, contrôler Gold, puis rafraîchir Power BI.
+
+\begin{lstlisting}[language=bash,caption={Commandes dbt de contrôle}]
+dbt debug
+dbt source freshness
+dbt run --select silver_t
+dbt test --select silver_t
+dbt run --select silver_b
+dbt test --select silver_b
+dbt run --select gold_e
+dbt snapshot
+dbt run --select gold_f
+dbt test --select gold_f
+\end{lstlisting}
+
+\chapter{Règles du modèle Power BI}
+
+\section{Relations}
+Les cinq relations vont de la dimension côté 1 vers \tech{fact\_orders} côté N : clients par \tech{customer\_id}, produits par \tech{product\_id}, magasins par \tech{store\_id}, employés par \tech{employee\_id} et commandes par \tech{order\_id}. Le filtre croisé est simple. Les dimensions importées doivent être limitées à leur version courante.
+
+Si Power BI signale un doublon côté 1, il faut vérifier le filtre de snapshot au lieu de forcer une relation plusieurs-à-plusieurs. Cette dernière masquerait un défaut de modèle.
+
+\section{Mesures de départ}
+\begin{lstlisting}[language={},caption={Mesures DAX recommandées}]
+Revenue = SUM ( fact_orders[sales_amount] )
+Orders = DISTINCTCOUNT ( fact_orders[order_id] )
+Order Lines = DISTINCTCOUNT ( fact_orders[order_item_id] )
+Items = SUM ( fact_orders[quantity] )
+Average Order Value = DIVIDE ( [Revenue], [Orders], 0 )
+Average Selling Price = DIVIDE ( [Revenue], [Items], 0 )
+\end{lstlisting}
+
+Une page exécutive contient quatre cartes, une tendance et un classement des magasins. Les pages détaillées répondent chacune à un thème. La page employés mesure l'activité enregistrée, mais ne doit pas transformer le revenu associé en jugement automatique de productivité.
+
+\chapter{Matrice de traçabilité}
+
+\begin{longtable}{p{1.2cm}p{4.2cm}p{4.1cm}p{3.3cm}}
+\caption{Traçabilité besoin--implémentation--test}\label{tab:traceability}\\
+\toprule
+ID & Besoin & Implémentation & Vérification \\
+\midrule
+\endfirsthead
+\toprule ID & Besoin & Implémentation & Vérification \\
+\midrule
+\endhead
+F01 & Inscription automatique & Événement client Flask & Client dans dim \\
+F02 & Commande cohérente & Clés actives & Zéro orphelin \\
+F03 & Employé du magasin & Filtre par store & Test intertables \\
+F04 & Une à cinq lignes & Produits actifs & Comptage par ordre \\
+F05 & Atomicité & Transaction & Rollback forcé \\
+F06 & Changements & change\_version & Curseur Bronze \\
+F07 & Rejeu sûr & merge + clé unique & Test unique \\
+F08 & Historique & Snapshot timestamp & Version courante \\
+F09 & Grain du fait & order\_item\_id & Unique et non nul \\
+F10 & BI & Schéma en étoile & Relations 1:N \\
+NF01 & Secrets & Environnement & Scan du dépôt \\
+NF02 & Observabilité & Logs par composant & Inspection des runs \\
+\bottomrule
+\end{longtable}
+
+\section{Checklist de démonstration}
+\begin{enumerate}
+  \item Vérifier les conteneurs Docker.
+  \item Créer un client et une commande depuis la page web.
+  \item Contrôler les relations dans PostgreSQL.
+  \item Déclencher le DAG ou attendre l'intervalle horaire.
+  \item Confirmer le succès des onze tâches.
+  \item Exécuter les requêtes de recette Gold.
+  \item Rafraîchir Power BI.
+  \item Contrôler \tech{Orders}, \tech{Revenue} et \tech{Items}.
+\end{enumerate}
+
