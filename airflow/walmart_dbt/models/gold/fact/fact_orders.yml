@@ -6,6 +6,8 @@ models:
       Table de faits au grain d'une ligne de commande. Utiliser sales_amount
       pour les mesures additives Power BI; order_total_amount est repete sur
       chaque ligne et ne doit pas etre additionne.
+    data_tests:
+      - dim_orders_order_item_match
     columns:
       - name: order_item_id
         data_tests:
