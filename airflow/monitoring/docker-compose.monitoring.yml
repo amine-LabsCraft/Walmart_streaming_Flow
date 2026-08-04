@@ -1,0 +1,181 @@
+x-airflow-observability-env: &airflow-observability-env
+  AIRFLOW__METRICS__OTEL_ON: "true"
+  AIRFLOW__METRICS__OTEL_PREFIX: airflow
+  AIRFLOW__METRICS__METRICS_ALLOW_LIST: scheduler,executor,dagrun,task,ti,pool,celery,dag_processing,operator
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_METRIC_EXPORT_INTERVAL: "15000"
+  OTEL_SERVICE_NAME: walmart-airflow
+
+services:
+  airflow-apiserver:
+    environment:
+      <<: *airflow-observability-env
+
+  airflow-scheduler:
+    environment:
+      <<: *airflow-observability-env
+
+  airflow-dag-processor:
+    environment:
+      <<: *airflow-observability-env
+
+  airflow-worker:
+    environment:
+      <<: *airflow-observability-env
+
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    profiles: [observability]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+      - --web.enable-remote-write-receiver
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - ./monitoring/runtime:/etc/prometheus/runtime:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, wget, --spider, -q, http://localhost:9090/-/ready]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-walmart-local-only}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, wget --spider -q http://localhost:3000/api/health || exit 1]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  alloy:
+    image: grafana/alloy:v1.18.0
+    profiles: [observability]
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy
+      - /etc/alloy/config.alloy
+    ports:
+      - "127.0.0.1:12345:12345"
+    volumes:
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.7.2
+    profiles: [observability]
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, /usr/bin/loki, -config.file=/etc/loki/loki.yml, -verify-config=true]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  blackbox-exporter:
+    image: quay.io/prometheus/blackbox-exporter:v0.28.0
+    profiles: [observability]
+    command: --config.file=/etc/blackbox/blackbox.yml
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    restart: unless-stopped
+
+  airflow-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    profiles: [observability]
+    environment:
+      DATA_SOURCE_NAME: postgresql://airflow:airflow@postgres:5432/airflow?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.57.0
+    profiles: [observability]
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    restart: unless-stopped
+
+  walmart-exporter:
+    build:
+      context: ./monitoring/exporters/walmart-exporter
+      dockerfile: Dockerfile
+    image: walmart-observability-exporter:1.0.0
+    profiles: [observability]
+    env_file:
+      - ${ENV_FILE_PATH:-.env}
+    environment:
+      AIRFLOW_DB_CONNECTION: postgresql://airflow:airflow@postgres:5432/airflow
+      POSTGRES_CONNECTION: ${POSTGRES_CONNECTION:-}
+      WALMART_EXPORTER_PORT: "9105"
+      WALMART_EXPORTER_CACHE_SECONDS: "30"
+      WALMART_DATABRICKS_METRICS_ENABLED: ${WALMART_DATABRICKS_METRICS_ENABLED:-false}
+      WALMART_GOLD_TABLE: ${WALMART_GOLD_TABLE:-walmart.gold.fact_orders}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:9105/metrics', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  alloy-data:
+  loki-data:

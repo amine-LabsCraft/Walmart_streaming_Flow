@@ -1,0 +1,28 @@
+groups:
+  - name: walmart-generator
+    rules:
+      - alert: WalmartGeneratorUnavailable
+        expr: up{job="walmart-generator"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Order generator metrics unavailable"
+          description: "The generator was discovered but Prometheus cannot scrape it."
+
+      - alert: WalmartGeneratorStalled
+        expr: walmart_generator_mode{mode="running"} == 1 and time() - walmart_generator_last_order_timestamp_seconds > 60
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Running generator has stopped producing orders"
+          description: "The generator is in running mode but has produced no order for more than one minute."
+
+      - alert: WalmartGeneratorErrors
+        expr: increase(walmart_generator_errors_total[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Generator error detected"
+          description: "At least one order or customer signup error occurred during the last five minutes."

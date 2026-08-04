@@ -1,0 +1,47 @@
+groups:
+  - name: walmart-pipeline
+    rules:
+      - alert: WalmartSourceUnavailable
+        expr: walmart_source_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ghost PostgreSQL source unavailable"
+          description: "The read-only source check has failed for more than two minutes."
+
+      - alert: WalmartHourlyPipelineLate
+        expr: time() - walmart_airflow_last_success_timestamp_seconds > 5400
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hourly pipeline has not succeeded recently"
+          description: "No successful orchestrate DAG run has been observed for more than 90 minutes."
+
+      - alert: WalmartOrdersWithoutItems
+        expr: walmart_source_orders_without_items > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Source orders without order items detected"
+          description: "At least one raw order has no matching raw.order_items row."
+
+      - alert: WalmartSourceToGoldLag
+        expr: (walmart_gold_monitoring_enabled == 1) and (walmart_source_last_change_timestamp_seconds - walmart_gold_last_processed_timestamp_seconds > 5400)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Source-to-Gold lag exceeds 90 minutes"
+          description: "Gold processing is behind the newest source insert or update by more than the hourly SLA."
+
+      - alert: WalmartGoldOrderItemNull
+        expr: walmart_gold_null_order_item_rows > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Gold rows with null order_item_id detected"
+          description: "The monitored Gold fact contains at least one null order_item_id."

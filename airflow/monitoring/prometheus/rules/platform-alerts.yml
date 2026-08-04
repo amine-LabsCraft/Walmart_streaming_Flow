@@ -1,0 +1,29 @@
+groups:
+  - name: walmart-platform
+    rules:
+      - alert: WalmartEndpointUnavailable
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Endpoint {{ $labels.service }} unavailable"
+          description: "The endpoint has failed its HTTP probe for more than two minutes."
+
+      - alert: WalmartExporterUnavailable
+        expr: up{job="walmart-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Walmart exporter unavailable"
+          description: "Prometheus cannot collect the read-only project metrics."
+
+      - alert: AirflowMetadataDatabaseUnavailable
+        expr: pg_up{job="airflow-postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Airflow metadata PostgreSQL unavailable"
+          description: "The Airflow PostgreSQL exporter cannot reach its database."

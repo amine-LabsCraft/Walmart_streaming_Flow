@@ -15,15 +15,15 @@ The solution begins with PostgreSQL operational tables for sales, stores, produc
 
 ### Business value
 
-| Business requirement | Engineering capability | Outcome |
-|---|---|---|
-| Trustworthy retail KPIs | Tested Gold facts and conformed dimensions | Consistent revenue, margin, quantity, and profit-rate reporting |
+| Business requirement       | Engineering capability | Outcome |
+|---                         |---|---|
+| Trustworthy retail KPIs    | Tested Gold facts and conformed dimensions | Consistent revenue, margin, quantity, and profit-rate reporting |
 | Historical reproducibility | Delta Lake ACID transactions, time travel, and SCD Type 2 | Auditable answers for “what was known at that time?” |
-| Fast daily refreshes | Incremental CDC, partition pruning, and idempotent `MERGE` | Lower latency and reduced compute consumption |
-| Enterprise governance | Unity Catalog, schema isolation, lineage metadata, and least privilege | Discoverable, controlled, and traceable datasets |
-| Operational resilience | Airflow retries, remote run monitoring, and deterministic jobs | Recoverable pipelines with clear failure boundaries |
-| Developer productivity | `uv`, dbt, reusable macros, and environment-driven configuration | Reproducible local and CI/CD workflows |
-| Agentic data access | Ghost MCP server connected to PostgreSQL through VS Code | Natural-language exploration without bypassing database controls |
+| Fast daily refreshes       | Incremental CDC, partition pruning, and idempotent `MERGE` | Lower latency and reduced compute consumption |
+| Enterprise governance      | Unity Catalog, schema isolation, lineage metadata, and least privilege | Discoverable, controlled, and traceable datasets |
+| Operational resilience     | Airflow retries, remote run monitoring, and deterministic jobs | Recoverable pipelines with clear failure boundaries |
+| Developer productivity     | `uv`, dbt, reusable macros, and environment-driven configuration | Reproducible local and CI/CD workflows |
+| Agentic data access        | Ghost MCP server connected to PostgreSQL through VS Code | Natural-language exploration without bypassing database controls |
 
 ### Design principles
 
@@ -154,7 +154,7 @@ flowchart LR
 ### Layer contracts
 
 | Layer | Unity Catalog namespace | Data contract | Write pattern | Primary consumers |
-|---|---|---|---|---|
+|-------|-------------------------|---------------|---------------|-------------------|
 | Bronze | `walmart_catalog.bronze` | Source-faithful, append-only records plus audit metadata | Append | Data engineers, replay jobs |
 | Silver | `walmart_catalog.silver` | Typed, deduplicated, reconciled, CDC-aware entities | `MERGE`, overwrite of affected partitions | dbt, analysts, ML features |
 | Gold | `walmart_catalog.gold` | Conformed star schema and stable business metrics | dbt incremental/full build | BI, finance, operations, analytics |
@@ -165,13 +165,13 @@ Bronze preserves the source payload at the lowest practical level of transformat
 
 **Required audit columns**
 
-| Column | Type | Purpose |
-|---|---|---|
-| `_ingested_at` | `TIMESTAMP` | UTC timestamp when the record entered the lakehouse |
-| `_source_file` | `STRING` | JDBC batch identifier, file path, or logical source reference |
-| `_checksum` | `STRING` | SHA-256 digest of deterministic business columns |
-| `_batch_id` | `STRING` | Airflow/Databricks run correlation identifier |
-| `_source_system` | `STRING` | Origin system, fixed to `postgresql_walmart_oltp` for this source |
+|    Column          |    Type     |                            Purpose                                |
+|--------------------|-------------|-------------------------------------------------------------------|
+| `_ingested_at`     | `TIMESTAMP` | UTC timestamp when the record entered the lakehouse               |
+| `_source_file`     | `STRING`    | JDBC batch identifier, file path, or logical source reference     |
+| `_checksum`        | `STRING`    | SHA-256 digest of deterministic business columns                  |
+| `_batch_id`        | `STRING`    | Airflow/Databricks run correlation identifier                     |
+| `_source_system`   | `STRING`    | Origin system, fixed to `postgresql_walmart_oltp` for this source |
 
 **Bronze rules**
 
@@ -445,8 +445,8 @@ erDiagram
 
 #### Metric definitions
 
-| Metric | Definition | Formula |
-|---|---|---|
+| Metric       | Definition | Formula |
+|--------|---|---|
 | Gross sales | Value before discounts | `quantity × unit_price` |
 | Net revenue | Recognized sales after discounts | `gross_sales_amount − discount_amount` |
 | Cost amount | Extended merchandise cost | `quantity × unit_cost` |

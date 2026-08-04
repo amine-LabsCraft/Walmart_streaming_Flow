@@ -1,0 +1,14 @@
+apiVersion: 1
+
+providers:
+  - name: Walmart Streaming Flow
+    orgId: 1
+    folder: Walmart Streaming Flow
+    folderUid: walmart-streaming-flow
+    type: file
+    disableDeletion: false
+    editable: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -1,3 +1,4 @@
 ﻿databricks-sdk
 dbt-core==1.11.12
 dbt-databricks==1.12.2
+apache-airflow[otel]==3.2.2

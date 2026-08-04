@@ -256,10 +256,10 @@ An advisory transaction lock serializes identifier allocation when multiple gene
 
 ### Generator modes
 
-| Mode | Behaviour | Best use |
-|---|---|---|
-| Random customer | Selects a different valid customer when possible | Dashboard demonstrations and varied data |
-| Fixed customer | Reuses one existing `customer_id` | Customer journey and repeat-purchase analysis |
+| Mode            |                   Behaviour                      |                Best use                                 |
+|-----------------|--------------------------------------------------|---------------------------------------------------------|
+| Random customer | Selects a different valid customer when possible | Dashboard demonstrations and varied data                |
+| Fixed customer  | Reuses one existing `customer_id`                | Customer journey and repeat-purchase analysis           |
 
 The generator changes only the source database. It does **not** call Airflow, Databricks, dbt, or Power BI directly.
 
@@ -290,14 +290,14 @@ Every order and item mutation receives the next sequence value. `change_version`
 
 ### Cursor strategy by entity
 
-| Entity | Technical key | Incremental filter |
-|---|---|---|
-| Orders | `order_id` | `change_version > max(change_version)` |
-| Order items | `order_item_id` | `change_version > max(change_version)` |
-| Customers | `customer_id` | `updated_timestamp >= max(updated_timestamp)` |
-| Products | `product_id` | `updated_timestamp >= max(updated_timestamp)` |
-| Stores | `store_id` | `updated_timestamp >= max(updated_timestamp)` |
-| Employees | `employee_id` | `updated_timestamp >= max(updated_timestamp)` |
+| Entity      |       Technical key | Incremental filter                            |
+|-------------|---------------------|-----------------------------------------------|
+| Orders      | `order_id`          | `change_version > max(change_version)`        |
+| Order items | `order_item_id`     | `change_version > max(change_version)`        |
+| Customers   | `customer_id`       | `updated_timestamp >= max(updated_timestamp)` |
+| Products    | `product_id`        | `updated_timestamp >= max(updated_timestamp)` |
+| Stores      | `store_id`          | `updated_timestamp >= max(updated_timestamp)` |
+| Employees   | `employee_id`       | `updated_timestamp >= max(updated_timestamp)` |
 
 The included migration utility updates only the `orders` and `order_items` connector objects and supports dry-run mode before `--apply`.
 
@@ -512,13 +512,13 @@ Revenue = SUM ( fact_orders[order_total_amount] )
 
 ### Recommended dashboard pages
 
-| Page | KPIs and visuals |
-|---|---|
-| Executive overview | Revenue, orders, items, AOV, hourly trend |
-| Store performance | Revenue/orders by store, province, employee |
-| Product performance | Revenue/units by product, category, brand |
-| Customer analysis | Frequency, value, repeat purchases, geography |
-| Operations | Latest order time, pipeline freshness, processed rows |
+| Page                | KPIs and visuals                                        |
+|---------------------|---------------------------------------------------------|
+| Executive overview  | Revenue, orders, items, AOV, hourly trend               |
+| Store performance   | Revenue/orders by store, province, employee             |
+| Product performance | Revenue/units by product, category, brand               |
+| Customer analysis   | Frequency, value, repeat purchases, geography           |
+| Operations          | Latest order time, pipeline freshness, processed rows   |
 
 ---
 
