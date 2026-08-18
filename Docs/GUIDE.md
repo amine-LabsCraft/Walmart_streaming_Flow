@@ -169,11 +169,11 @@ La base Grafana doit retourner `ok`.
 
 ## 5. Ouvrir les interfaces
 
-| Interface | Adresse | Fonction |
-|---|---|---|
-| Générateur Order Pulse | <http://127.0.0.1:5050> | Générer des commandes ou de nouveaux clients |
-| Airflow | <http://127.0.0.1:8080> | Suivre le DAG `orchestrate` |
-| Grafana | <http://127.0.0.1:3000> | Consulter les dashboards du pipeline |
+| Interface                            | Adresse              |               Fonction |
+|--------------------------------------|----------------------|------------------|
+| Générateur Order Pulse               | <http://127.0.0.1:5050> | Générer des commandes ou de nouveaux clients |
+| Airflow                              | <http://127.0.0.1:8080> | Suivre le DAG `orchestrate` |
+| Grafana | <http://127.0.0.1:3000>    | Consulter les dashboards du pipeline |
 | Prometheus | <http://127.0.0.1:9090> | Interroger les métriques |
 | Cibles Prometheus | <http://127.0.0.1:9090/targets> | Vérifier les services supervisés |
 | Règles Prometheus | <http://127.0.0.1:9090/rules> | Vérifier les alertes et règles qualité |

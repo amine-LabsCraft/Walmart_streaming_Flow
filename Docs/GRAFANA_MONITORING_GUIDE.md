@@ -54,12 +54,12 @@ transmis aux conteneurs de monitoring.
 
 ## Interfaces
 
-| Service | Adresse | Utilité |
-|---|---|---|
-| Grafana | `http://127.0.0.1:3000` | Dashboards techniques |
-| Prometheus | `http://127.0.0.1:9090` | Métriques et règles |
-| Grafana Alloy | `http://127.0.0.1:12345` | État du collecteur OTEL |
-| Airflow | `http://127.0.0.1:8080` | Orchestration existante |
+| Service      |      Adresse            | Utilité                  |
+|--------------|---------------------    |--------------------------|
+| Grafana      | `http://127.0.0.1:3000` | Dashboards techniques    |
+| Prometheus   | `http://127.0.0.1:9090` | Métriques et règles      |
+| Grafana Alloy| `http://127.0.0.1:12345`| État du collecteur OTEL  |
+| Airflow      | `http://127.0.0.1:8080` | Orchestration existante  |
 
 ## Dashboards provisionnés
 

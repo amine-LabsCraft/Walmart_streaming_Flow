@@ -8,4 +8,4 @@
       http_path: XXX
       schema: dbt_schema
       threads: 1
-      token: XXXXX
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
