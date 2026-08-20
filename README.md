@@ -23,8 +23,6 @@
   <img src="./Docs/architecture/end_to_end_architecture.png" alt="Walmart Streaming Flow general architecture" width="100%">
 </div>
 
-> [!NOTE]
-> This educational portfolio project is not affiliated with or endorsed by Walmart Inc. The name is used only as a retail business scenario.
 
 ---
 

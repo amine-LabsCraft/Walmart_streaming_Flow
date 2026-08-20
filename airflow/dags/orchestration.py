@@ -16,7 +16,7 @@ from databricks.sdk.service.jobs import (
 @dag(
     dag_id="orchestrate",
     schedule="@hourly",
-    start_date=datetime(2026, 7, 25),
+    start_date=datetime(2026, 8, 17),
     catchup=False,
     tags=["walmart", "dbt", "databricks"],
 )
