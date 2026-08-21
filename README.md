@@ -710,11 +710,12 @@ The complete source-to-Power BI path is implemented and validated end to end.
 ---
 
 
-<div align="center">
+
   ## 👤 Auteur
-</div>
+
 <div align="center">
-**Amine Ait Ali**  <div align="center">
+**Amine Ait Ali**
+</div>
 - GitHub: [@amine-LabsCraft](https://github.com/amine-LabsCraft)  
 - Portfolio: [amine-aitali-5752.netlify.app](https://amine-aitali-5752.netlify.app/)
 
@@ -724,4 +725,4 @@ PostgreSQL · Python · Databricks · Delta Lake · dbt · Apache Airflow · Pow
 
 Built to demonstrate how operational correctness, incremental processing, data quality, orchestration, and BI semantics fit together in one observable pipeline.
 
-</div>
+
