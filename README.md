@@ -704,11 +704,19 @@ The complete source-to-Power BI path is implemented and validated end to end.
 
 ---
 
-## Author
 
 <div align="center">
 
-### Amine Ait Ali
+---
+
+
+<div align="center">
+  ## 👤 Auteur
+</div>
+<div align="center">
+**Amine Ait Ali**  <div align="center">
+- GitHub: [@amine-LabsCraft](https://github.com/amine-LabsCraft)  
+- Portfolio: [amine-aitali-5752.netlify.app](https://amine-aitali-5752.netlify.app/)
 
 **Data Engineering · Lakehouse Architecture · Analytics Engineering**
 
