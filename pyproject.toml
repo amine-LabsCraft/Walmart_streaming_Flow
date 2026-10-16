@@ -1,7 +1,7 @@
 [project]
 name = "walmart-streaming-flow"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local order generator, Airflow orchestration and dbt models for the Walmart Streaming Flow lakehouse"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [

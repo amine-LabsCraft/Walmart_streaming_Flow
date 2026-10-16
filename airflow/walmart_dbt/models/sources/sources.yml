@@ -1,14 +1,27 @@
+version: 2
+
 sources:
   - name: walmart_databricks
+    description: >-
+      Copie bronze de la base source locale, alimentée par la tâche Airflow
+      ingest_cdc (schéma bronze_local par défaut).
     database: walmart
     schema: "{{ env_var('WALMART_BRONZE_SCHEMA', 'bronze_local') }}"
-    config:
-      enabled: true
     tables:
       - name: orders
-      - name: customers  
-      - name: products
+        description: En-têtes de commande ; curseur incrémental change_version.
+        config:
+          loaded_at_field: updated_timestamp
+          freshness:
+            # Warning only: the generator is not always running.
+            warn_after: {count: 2, period: hour}
       - name: order_items
+        description: Lignes de commande ; curseur incrémental change_version.
+      - name: customers
+        description: Clients ; curseur incrémental updated_timestamp.
+      - name: products
+        description: Catalogue produits ; curseur incrémental updated_timestamp.
       - name: stores
-      - name: employees  
-        
+        description: Magasins ; curseur incrémental updated_timestamp.
+      - name: employees
+        description: Employés et magasin de rattachement.

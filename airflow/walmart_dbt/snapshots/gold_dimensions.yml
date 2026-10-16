@@ -1,0 +1,43 @@
+version: 2
+
+# Shared snapshot settings (catalog, schema, strategy, open-ended validity)
+# are defined once in dbt_project.yml.
+
+snapshots:
+
+  - name: dim_customers
+    description: Historique SCD2 des clients (une version par changement).
+    relation: ref('eph_customers')
+    config:
+      unique_key: customer_id
+      updated_at: customer_updated_timestamp
+
+  - name: dim_employees
+    description: Historique SCD2 des employés et de leur magasin de rattachement.
+    relation: ref('eph_employees')
+    config:
+      unique_key: employee_id
+      updated_at: employee_updated_timestamp
+
+  - name: dim_products
+    description: Historique SCD2 des produits, prix courant inclus.
+    relation: ref('eph_products')
+    config:
+      unique_key: product_id
+      updated_at: product_updated_timestamp
+
+  - name: dim_stores
+    description: Historique SCD2 des magasins.
+    relation: ref('eph_stores')
+    config:
+      unique_key: store_id
+      updated_at: store_updated_timestamp
+
+  - name: dim_orders
+    description: >-
+      Historique SCD2 des en-têtes de commande. order_item_id est la plus petite
+      ligne de la commande et sert de clé de rapprochement avec fact_orders.
+    relation: ref('eph_orders')
+    config:
+      unique_key: order_id
+      updated_at: order_updated_timestamp

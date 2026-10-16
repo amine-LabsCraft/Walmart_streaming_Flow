@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: obt_b
+    description: >-
+      One Big Table Silver Business : une ligne par ligne de commande,
+      enrichie du client, du produit, de l'employé et du magasin.
+    columns:
+      - name: order_item_id
+        description: Grain de la table.
+        data_tests:
+          - not_null
+          - unique
+      - name: order_id
+        data_tests:
+          - not_null
+      - name: customer_id
+        data_tests:
+          - not_null
+      - name: product_id
+        data_tests:
+          - not_null
+      - name: store_name
+        description: NULL signalerait une commande rattachée à un magasin inconnu.
+        data_tests:
+          - not_null

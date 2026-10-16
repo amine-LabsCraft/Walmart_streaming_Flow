@@ -11,6 +11,12 @@ models:
       Table Silver contenant tous les clients nettoyés,
       actifs et inactifs.
 
+    data_tests:
+      - valid_timestamp_order:
+          arguments:
+            created_column: created_timestamp
+            updated_column: updated_timestamp
+
     columns:
 
       - name: customer_id
@@ -84,6 +90,12 @@ models:
     description: >
       Table Silver contenant tous les employés nettoyés,
       actifs et inactifs.
+
+    data_tests:
+      - valid_timestamp_order:
+          arguments:
+            created_column: created_timestamp
+            updated_column: updated_timestamp
 
     columns:
 
@@ -173,6 +185,12 @@ models:
       Table Silver contenant tous les magasins nettoyés,
       actifs et inactifs.
 
+    data_tests:
+      - valid_timestamp_order:
+          arguments:
+            created_column: created_timestamp
+            updated_column: updated_timestamp
+
     columns:
 
       - name: store_id
@@ -236,6 +254,12 @@ models:
     description: >
       Table Silver contenant tous les produits nettoyés,
       actifs et inactifs.
+
+    data_tests:
+      - valid_timestamp_order:
+          arguments:
+            created_column: created_timestamp
+            updated_column: updated_timestamp
 
     columns:
 
@@ -303,6 +327,12 @@ models:
     description: >
       Table Silver contenant toutes les commandes nettoyées,
       actives et inactives.
+
+    data_tests:
+      - valid_timestamp_order:
+          arguments:
+            created_column: created_timestamp
+            updated_column: updated_timestamp
 
     columns:
 
@@ -397,6 +427,17 @@ models:
     description: >
       Table Silver contenant toutes les lignes de commande nettoyées,
       actives et inactives.
+
+    data_tests:
+      - valid_timestamp_order:
+          arguments:
+            created_column: created_timestamp
+            updated_column: updated_timestamp
+      - line_amount_consistency:
+          arguments:
+            quantity_column: quantity
+            unit_price_column: unit_price
+            line_amount_column: line_amount
 
     columns:
 

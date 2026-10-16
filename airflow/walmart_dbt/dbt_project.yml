@@ -15,17 +15,22 @@ clean-targets:
 
 models:
   walmart_dbt:
-
     silver_t:
-        +materialized: incremental
-        +schema: silver_t
+      +materialized: incremental
+      +schema: silver_t
     silver_b:
-         +materialized: table
-         +schema: silver_b
+      +materialized: table
+      +schema: silver_b
+    gold:
+      +materialized: table
+      +schema: gold
+      ephemeral:
+        +materialized: ephemeral
 
-    gold: 
-        +materialized: table
-        +schema: gold
-        ephemeral: 
-             +materialized: ephemeral
-         
+snapshots:
+  walmart_dbt:
+    +database: walmart
+    +schema: gold
+    +strategy: timestamp
+    # Current versions get an open-ended validity date instead of NULL.
+    +dbt_valid_to_current: "to_date('9999-12-31')"
