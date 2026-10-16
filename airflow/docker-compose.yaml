@@ -87,7 +87,6 @@ x-airflow-common:
     DATABRICKS_HOST: ${DATABRICKS_HOST}
     DATABRICKS_TOKEN: ${DATABRICKS_TOKEN}
     DATABRICKS_HTTP_PATH: ${DATABRICKS_HTTP_PATH}
-    DATABRICKS_JOB_ID: ${DATABRICKS_JOB_ID:-984394399040296}
 
     # ==========================================================
     # dbt

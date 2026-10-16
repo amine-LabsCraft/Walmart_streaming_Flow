@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="900" viewBox="0 0 1700 900" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/>
+    </marker>
+    <style>
+      .title { font-size: 34px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-size: 17px; fill: #475569; }
+      .panel-title { font-size: 19px; font-weight: 700; }
+      .box-title { font-size: 17px; font-weight: 700; fill: #0f172a; }
+      .text { font-size: 14px; fill: #334155; }
+      .small { font-size: 12.5px; fill: #475569; }
+      .label { font-size: 13px; fill: #1e293b; font-weight: 600; }
+      .chip { font-size: 13px; fill: #1e293b; }
+    </style>
+  </defs>
+
+  <rect width="1700" height="900" fill="#ffffff"/>
+
+  <text x="850" y="52" text-anchor="middle" class="title">Walmart Streaming Flow — Architecture</text>
+  <text x="850" y="82" text-anchor="middle" class="subtitle">PostgreSQL local · Apache Airflow · Databricks Delta Lake · dbt Core · Power BI · Prometheus / Grafana</text>
+
+  <!-- ===================== LOCAL PANEL ===================== -->
+  <rect x="30" y="110" width="900" height="760" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="54" y="142" class="panel-title" fill="#0f172a">Poste local · Docker Desktop</text>
+
+  <!-- Order Pulse -->
+  <rect x="60" y="170" width="260" height="120" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="80" y="200" class="box-title">Order Pulse</text>
+  <text x="80" y="224" class="text">Interface web Flask · :5050</text>
+  <text x="80" y="246" class="small">Commandes continues (1 à 5 articles)</text>
+  <text x="80" y="266" class="small">Inscription de nouveaux clients</text>
+
+  <!-- Source DB -->
+  <rect x="60" y="350" width="260" height="170" rx="12" fill="#e0f2fe" stroke="#336791" stroke-width="2"/>
+  <text x="80" y="380" class="box-title">walmart-source-db</text>
+  <text x="80" y="403" class="text">PostgreSQL 16 · 127.0.0.1:5433</text>
+  <text x="80" y="428" class="label">schéma raw</text>
+  <text x="80" y="450" class="small">orders · order_items · customers</text>
+  <text x="80" y="470" class="small">products · stores · employees</text>
+  <text x="80" y="496" class="small">Trigger change_version (curseur CDC)</text>
+
+  <line x1="190" y1="290" x2="190" y2="346" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="200" y="324" class="small">INSERT transactionnel</text>
+
+  <!-- Airflow -->
+  <rect x="380" y="170" width="520" height="350" rx="12" fill="#e0f2fe" stroke="#017cee" stroke-width="2"/>
+  <text x="400" y="200" class="box-title">Apache Airflow 3 · DAG orchestrate (@hourly)</text>
+  <text x="400" y="223" class="small">api-server :8080 · scheduler · dag-processor · celery worker · redis · postgres</text>
+
+  <rect x="400" y="245" width="480" height="78" rx="10" fill="#ffffff" stroke="#017cee"/>
+  <text x="418" y="272" class="label">1 · ingest_cdc</text>
+  <text x="418" y="294" class="small">Lit les lignes au-delà du watermark (change_version / updated_timestamp)</text>
+  <text x="418" y="313" class="small">et les fusionne (MERGE) dans walmart.bronze_local</text>
+
+  <rect x="400" y="337" width="480" height="163" rx="10" fill="#fff7ed" stroke="#ff694b"/>
+  <text x="418" y="364" class="label">2 · dbt Core (dbt-databricks)</text>
+  <text x="418" y="388" class="small">source_freshness</text>
+  <text x="418" y="408" class="small">silver_technical → silver_technical_tests</text>
+  <text x="418" y="428" class="small">silver_business → silver_business_tests</text>
+  <text x="418" y="448" class="small">gold_dimensions (snapshots SCD2)</text>
+  <text x="418" y="468" class="small">gold_facts → gold_facts_tests</text>
+  <text x="418" y="488" class="small">Projet : airflow/walmart_dbt</text>
+
+  <line x1="320" y1="435" x2="396" y2="290" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Monitoring -->
+  <rect x="60" y="590" width="840" height="250" rx="12" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="80" y="620" class="box-title">Observabilité (profil Docker « observability »)</text>
+
+  <g>
+    <rect x="80" y="640" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="172" y="664" text-anchor="middle" class="label">Prometheus</text>
+    <text x="172" y="684" text-anchor="middle" class="small">:9090 · règles d'alerte</text>
+
+    <rect x="285" y="640" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="377" y="664" text-anchor="middle" class="label">Grafana</text>
+    <text x="377" y="684" text-anchor="middle" class="small">:3000 · 4 dashboards</text>
+
+    <rect x="490" y="640" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="582" y="664" text-anchor="middle" class="label">Loki + Alloy</text>
+    <text x="582" y="684" text-anchor="middle" class="small">logs Docker · OTLP Airflow</text>
+
+    <rect x="695" y="640" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="787" y="664" text-anchor="middle" class="label">walmart-exporter</text>
+    <text x="787" y="684" text-anchor="middle" class="small">fraîcheur · qualité · Gold</text>
+
+    <rect x="80" y="712" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="172" y="736" text-anchor="middle" class="label">Blackbox exporter</text>
+    <text x="172" y="756" text-anchor="middle" class="small">sondes HTTP</text>
+
+    <rect x="285" y="712" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="377" y="736" text-anchor="middle" class="label">postgres-exporter</text>
+    <text x="377" y="756" text-anchor="middle" class="small">base metadata Airflow</text>
+
+    <rect x="490" y="712" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="582" y="736" text-anchor="middle" class="label">cAdvisor</text>
+    <text x="582" y="756" text-anchor="middle" class="small">ressources conteneurs</text>
+
+    <rect x="695" y="712" width="185" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+    <text x="787" y="736" text-anchor="middle" class="label">/metrics générateur</text>
+    <text x="787" y="756" text-anchor="middle" class="small">découverte par fichier</text>
+  </g>
+  <text x="80" y="808" class="small">Lecture seule : aucun composant d'observabilité n'écrit dans la source, Airflow ou Databricks.</text>
+
+  <line x1="120" y1="520" x2="120" y2="586" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow-muted)"/>
+  <line x1="640" y1="520" x2="640" y2="586" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow-muted)"/>
+  <text x="650" y="560" class="small" fill="#6d28d9">métriques OTLP · logs</text>
+  <text x="130" y="560" class="small" fill="#6d28d9">SELECT agrégés</text>
+
+  <!-- ===================== DATABRICKS PANEL ===================== -->
+  <rect x="980" y="110" width="420" height="760" rx="18" fill="#fff5f3" stroke="#ff3621" stroke-width="2"/>
+  <text x="1004" y="142" class="panel-title" fill="#b91c1c">Databricks · catalogue walmart</text>
+
+  <rect x="1010" y="170" width="360" height="100" rx="12" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+  <text x="1030" y="198" class="box-title">Bronze · bronze_local</text>
+  <text x="1030" y="222" class="small">6 tables Delta, copie fidèle de raw</text>
+  <text x="1030" y="242" class="small">alimentées par ingest_cdc (MERGE idempotent)</text>
+
+  <rect x="1010" y="300" width="360" height="100" rx="12" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+  <text x="1030" y="328" class="box-title">Silver technique · silver_t</text>
+  <text x="1030" y="352" class="small">6 modèles incrémentaux (merge sur clé)</text>
+  <text x="1030" y="372" class="small">not_null · unique · relations · cohérences</text>
+
+  <rect x="1010" y="430" width="360" height="100" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="1030" y="458" class="box-title">Silver business · silver_b</text>
+  <text x="1030" y="482" class="small">obt_b : une ligne par article de commande</text>
+  <text x="1030" y="502" class="small">client, produit, employé, magasin joints</text>
+
+  <rect x="1010" y="560" width="360" height="130" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="1030" y="588" class="box-title">Gold · gold</text>
+  <text x="1030" y="612" class="small">dim_customers · dim_products · dim_stores</text>
+  <text x="1030" y="632" class="small">dim_employees · dim_orders (snapshots SCD2)</text>
+  <text x="1030" y="656" class="label">fact_orders</text>
+  <text x="1030" y="676" class="small">grain : une ligne par order_item_id</text>
+
+  <rect x="1010" y="720" width="360" height="120" rx="12" fill="#ffffff" stroke="#ff3621" stroke-width="2"/>
+  <text x="1030" y="748" class="box-title">SQL Warehouse</text>
+  <text x="1030" y="772" class="small">exécute ingest_cdc et dbt</text>
+  <text x="1030" y="792" class="small">sert le modèle Gold à Power BI</text>
+  <text x="1030" y="816" class="small">(Delta Lake · Unity Catalog)</text>
+
+  <line x1="1190" y1="270" x2="1190" y2="296" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1190" y1="400" x2="1190" y2="426" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="1190" y1="530" x2="1190" y2="556" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Airflow -> Databricks -->
+  <path d="M880,284 C 940,284 950,220 1006,220" fill="none" stroke="#017cee" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="912" y="312" class="small" fill="#0369a1">MERGE</text>
+  <path d="M880,420 C 945,420 950,350 1006,350" fill="none" stroke="#ff694b" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+  <path d="M880,450 C 950,450 950,620 1006,620" fill="none" stroke="#ff694b" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+  <text x="912" y="700" class="small" fill="#c2410c">dbt run</text>
+  <text x="912" y="717" class="small" fill="#c2410c">snapshot</text>
+  <text x="912" y="734" class="small" fill="#c2410c">test</text>
+
+  <!-- ===================== POWER BI ===================== -->
+  <rect x="1440" y="560" width="230" height="130" rx="12" fill="#fffbeb" stroke="#f2c811" stroke-width="2.5"/>
+  <text x="1460" y="590" class="box-title">Power BI</text>
+  <text x="1460" y="614" class="small">Connecteur Azure Databricks</text>
+  <text x="1460" y="634" class="small">modèle en étoile Gold</text>
+  <text x="1460" y="654" class="small">revenu · commandes · panier</text>
+  <text x="1460" y="674" class="small">magasins · produits · clients</text>
+  <line x1="1370" y1="625" x2="1436" y2="625" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <rect x="1440" y="170" width="230" height="170" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1460" y="198" class="label">Légende</text>
+  <line x1="1460" y1="224" x2="1510" y2="224" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1520" y="229" class="small">flux de données</text>
+  <line x1="1460" y1="256" x2="1510" y2="256" stroke="#017cee" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="1520" y="261" class="small">ingestion Airflow</text>
+  <line x1="1460" y1="288" x2="1510" y2="288" stroke="#ff694b" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+  <text x="1520" y="293" class="small">transformation dbt</text>
+  <line x1="1460" y1="320" x2="1510" y2="320" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow-muted)"/>
+  <text x="1520" y="325" class="small">observabilité</text>
+</svg>

@@ -1,4 +1,6 @@
-# Guide Grafana et monitoring
+# Monitoring — Prometheus, Grafana, Loki
+
+Démarrage complet de la plateforme : voir [RUNBOOK.md](RUNBOOK.md). Vue d'ensemble : [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Objectif
 

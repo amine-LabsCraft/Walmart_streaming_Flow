@@ -91,17 +91,9 @@ def orchestrate():
     )
 
     # ============================================================
-    # GOLD - EPHEMERAL
-    # ============================================================
-
-    gold_ephemeral = BashOperator(
-        task_id="gold_ephemeral",
-        cwd="/opt/airflow/walmart_dbt",
-        bash_command="dbt run --select path:models/gold/ephemeral",
-    )
-
-    # ============================================================
     # GOLD - DIMENSIONS
+    # Snapshots compile the ephemeral models (models/gold/ephemeral)
+    # inline, so they need no separate dbt run.
     # ============================================================
 
     gold_dimensions = BashOperator(
@@ -138,7 +130,6 @@ def orchestrate():
         >> silver_technical_tests
         >> silver_business
         >> silver_business_tests
-        >> gold_ephemeral
         >> gold_dimensions
         >> gold_facts
         >> gold_facts_tests

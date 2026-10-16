@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="860" viewBox="0 0 1440 860" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<style>.t{font-size:28px;font-weight:700;fill:#0f172a}.s{font-size:16px;fill:#475569}.n{font-size:17px;font-weight:700;fill:#ffffff;font-family:Consolas,monospace}.c{font-size:13.5px;fill:#334155}.k{font-size:13px;font-weight:700;fill:#b45309}</style>
+<rect width="1440" height="860" fill="#ffffff"/>
+<text x="40" y="50" class="t">Modèle en étoile Gold · walmart.gold</text>
+<text x="40" y="78" class="s">Relations 1 → * depuis chaque dimension (version courante : dbt_valid_to = 9999-12-31) vers fact_orders</text>
+<path d="M390,238.0 C475.0,238.0 475.0,280 560,280" fill="none" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="398" y="230.0" class="k">1</text><text x="544" y="272" class="k">*</text>
+<text x="475.0" y="249.0" text-anchor="middle" class="c">order_id</text>
+<rect x="70" y="150" width="320" height="176" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+<path d="M70,160 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v30 h-320 z" fill="#d97706"/>
+<text x="86" y="177" class="n">dim_orders</text>
+<text x="86" y="214" class="c">order_id</text>
+<text x="86" y="238" class="c">order_item_id (1er article)</text>
+<text x="86" y="262" class="c">payment_method · order_status</text>
+<text x="86" y="286" class="c">order_timestamp</text>
+<text x="86" y="310" class="c">dbt_valid_from / dbt_valid_to</text>
+<path d="M390,588.0 C475.0,588.0 475.0,492 560,492" fill="none" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="398" y="580.0" class="k">1</text><text x="544" y="484" class="k">*</text>
+<text x="475.0" y="530.0" text-anchor="middle" class="c">customer_id</text>
+<rect x="70" y="500" width="320" height="176" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+<path d="M70,510 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v30 h-320 z" fill="#d97706"/>
+<text x="86" y="527" class="n">dim_customers</text>
+<text x="86" y="564" class="c">customer_id</text>
+<text x="86" y="588" class="c">nom · email · téléphone</text>
+<text x="86" y="612" class="c">ville · province · pays</text>
+<text x="86" y="636" class="c">customer_is_active</text>
+<text x="86" y="660" class="c">dbt_valid_from / dbt_valid_to</text>
+<path d="M1050,238.0 C965.0,238.0 965.0,280 880,280" fill="none" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="1032" y="230.0" class="k">1</text><text x="888" y="272" class="k">*</text>
+<text x="965.0" y="249.0" text-anchor="middle" class="c">product_id</text>
+<rect x="1050" y="150" width="320" height="176" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+<path d="M1050,160 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v30 h-320 z" fill="#d97706"/>
+<text x="1066" y="177" class="n">dim_products</text>
+<text x="1066" y="214" class="c">product_id</text>
+<text x="1066" y="238" class="c">product_name · category</text>
+<text x="1066" y="262" class="c">brand · price</text>
+<text x="1066" y="286" class="c">product_is_active</text>
+<text x="1066" y="310" class="c">dbt_valid_from / dbt_valid_to</text>
+<path d="M1050,588.0 C965.0,588.0 965.0,492 880,492" fill="none" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="1032" y="580.0" class="k">1</text><text x="888" y="484" class="k">*</text>
+<text x="965.0" y="530.0" text-anchor="middle" class="c">store_id</text>
+<rect x="1050" y="500" width="320" height="176" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+<path d="M1050,510 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v30 h-320 z" fill="#d97706"/>
+<text x="1066" y="527" class="n">dim_stores</text>
+<text x="1066" y="564" class="c">store_id</text>
+<text x="1066" y="588" class="c">store_name</text>
+<text x="1066" y="612" class="c">ville · province · pays</text>
+<text x="1066" y="636" class="c">store_is_active</text>
+<text x="1066" y="660" class="c">dbt_valid_from / dbt_valid_to</text>
+<line x1="720.0" y1="640" x2="720.0" y2="522" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="728.0" y="632" class="k">1</text><text x="728.0" y="542" class="k">*</text>
+<text x="740.0" y="586.0" class="c">employee_id</text>
+<rect x="560" y="640" width="320" height="152" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+<path d="M560,650 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v30 h-320 z" fill="#d97706"/>
+<text x="576" y="667" class="n">dim_employees</text>
+<text x="576" y="704" class="c">employee_id · store_id</text>
+<text x="576" y="728" class="c">nom · email · job_title</text>
+<text x="576" y="752" class="c">salary · employee_is_active</text>
+<text x="576" y="776" class="c">dbt_valid_from / dbt_valid_to</text>
+<rect x="560" y="250" width="320" height="272" rx="10" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
+<path d="M560,260 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v30 h-320 z" fill="#b45309"/>
+<text x="576" y="277" class="n">fact_orders</text>
+<text x="576" y="314" class="c">order_item_id  (grain, unique)</text>
+<text x="576" y="338" class="c">order_id · customer_id</text>
+<text x="576" y="362" class="c">product_id · store_id · employee_id</text>
+<text x="576" y="386" class="c">order_date · date_key</text>
+<text x="576" y="410" class="c">quantity · unit_price</text>
+<text x="576" y="434" class="c">sales_amount  (additif)</text>
+<text x="576" y="458" class="c">order_total_amount  (non additif)</text>
+<text x="576" y="482" class="c">payment_method · order_status</text>
+<text x="576" y="506" class="c">processed_at</text>
+<text x="40" y="836" class="s">Mesures : revenu = SUM(sales_amount) · commandes = DISTINCTCOUNT(order_id) · ne jamais additionner order_total_amount (répété par article).</text>
+</svg>

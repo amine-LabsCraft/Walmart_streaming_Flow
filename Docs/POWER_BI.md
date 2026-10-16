@@ -53,6 +53,8 @@ Ne pas charger Bronze, Silver, `obt_b` ni les tables de restauration telles que 
 
 ### Schéma en étoile validé
 
+![Modèle en étoile Gold](images/star_schema.png)
+
 ```mermaid
 flowchart TB
     DO["dim_orders<br/>order_id unique"]
