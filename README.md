@@ -4,7 +4,7 @@
 
 ### Continuous retail events. Incremental lakehouse processing. Analytics-ready facts.
 
-**Ghost PostgreSQL · Python · Databricks · Delta Lake · dbt · Apache Airflow · Power BI**
+**Local PostgreSQL (Docker) · Python · Databricks · Delta Lake · dbt · Apache Airflow · Power BI**
 
 [![Python](https://img.shields.io/badge/Python-3.11%20to%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Transactional%20Source-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -82,9 +82,9 @@ The image above is optimized for fast reading: user control, source transaction,
 ```mermaid
 flowchart LR
     UI["Order Pulse<br/>Flask UI"] --> GEN["Python generator<br/>psycopg2"]
-    GEN -->|"single DB transaction"| PG[("Ghost PostgreSQL<br/>raw schema")]
-    PG -->|"change_version / timestamps"| CDC["Databricks<br/>incremental ingestion"]
-    CDC --> B[("walmart.bronze")]
+    GEN -->|"single DB transaction"| PG[("Local PostgreSQL<br/>raw schema")]
+    PG -->|"change_version / timestamps"| CDC["Airflow push<br/>incremental ingestion"]
+    CDC --> B[("walmart.bronze_local")]
     B --> ST[("Silver Technical")]
     ST --> SB[("Silver Business<br/>obt_b")]
     SB --> G[("Gold<br/>snapshots + fact_orders")]
@@ -121,11 +121,11 @@ flowchart LR
 
 1. A user starts **Order Pulse** from a local browser.
 2. The Flask controller chooses random-customer or fixed-customer mode.
-3. Python queries active reference entities from the external Ghost database.
+3. Python queries active reference entities from the local `walmart-source-db` PostgreSQL container.
 4. One order and 1–5 items are inserted atomically into `raw.orders` and `raw.order_items`.
 5. PostgreSQL triggers assign new monotonic `change_version` values.
-6. Airflow triggers the remote Databricks ingestion job hourly or manually.
-7. Databricks promotes source changes into Bronze.
+6. Airflow runs hourly or manually; its `ingest_cdc` task reads new rows from the local source.
+7. Changed rows are merged into the Databricks `bronze_local` schema through the SQL warehouse.
 8. dbt incrementally merges the six technical entities, builds `obt_b`, runs tests, snapshots dimensions, and publishes `fact_orders`.
 9. Databricks SQL exposes the governed Gold layer to the completed Power BI semantic model.
 10. A Power BI refresh reveals new orders, items, revenue, stores, employees, customers, and products.
@@ -135,7 +135,7 @@ sequenceDiagram
     actor User
     participant UI as Order Pulse
     participant Gen as Python Generator
-    participant PG as Ghost PostgreSQL
+    participant PG as Local PostgreSQL
     participant AF as Airflow
     participant DBX as Databricks
     participant DBT as dbt
@@ -284,7 +284,7 @@ Every order and item mutation receives the next sequence value. `change_version`
 - independent of business timestamps;
 - non-null after backfill;
 - safe for insert and update capture;
-- suitable as the Lakeflow query-based connector cursor.
+- suitable as the watermark of the Airflow ingestion task.
 
 ### Cursor strategy by entity
 
@@ -315,7 +315,7 @@ Delta/dbt MERGE matches existing row
 
 ## Medallion layer contracts
 
-The dbt source is `walmart.bronze`. A custom schema macro writes explicit schemas instead of concatenating them with the profile default.
+The dbt source is `walmart.bronze_local` (override with `WALMART_BRONZE_SCHEMA`). A custom schema macro writes explicit schemas instead of concatenating them with the profile default.
 
 | Layer | Main objects | Materialization | Contract |
 |---|---|---|---|
@@ -621,12 +621,11 @@ No real credential belongs in Git.
 
 | Runtime | Variable | Purpose |
 |---|---|---|
-| Generator | `POSTGRES_CONNECTION` | External Ghost PostgreSQL URI |
-| Generator | `GHOST_API_KEY` | Ghost service credential if required by local tooling |
+| Generator | `POSTGRES_CONNECTION` | Local source URI, default `postgresql://walmart:walmart@localhost:5433/walmart` |
 | Airflow | `DATABRICKS_HOST` | Workspace URL |
 | Airflow | `DATABRICKS_TOKEN` | Local authentication token |
 | Airflow | `DATABRICKS_HTTP_PATH` | SQL Warehouse/compute path |
-| Airflow | `DATABRICKS_JOB_ID` | Remote CDC job identifier |
+| Airflow | `WALMART_BRONZE_SCHEMA` | Bronze schema written by `ingest_cdc`, default `bronze_local` |
 | Airflow | `FERNET_KEY` | Airflow encrypted-secret key |
 | dbt | `DBT_CATALOG` | Target catalog, default `walmart` |
 | dbt | `DBT_SCHEMA` | Profile fallback schema |
@@ -687,7 +686,7 @@ docker compose -f airflow\docker-compose.yaml exec airflow-apiserver `
 
 The complete source-to-Power BI path is implemented and validated end to end.
 
-- [x] External Ghost PostgreSQL source
+- [x] Local PostgreSQL source in Docker (replaces Ghost)
 - [x] Browser-controlled continuous order generator
 - [x] Atomic, FK-safe order creation
 - [x] Monotonic CDC cursor for orders and items

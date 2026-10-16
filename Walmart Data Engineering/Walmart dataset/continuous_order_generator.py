@@ -37,6 +37,7 @@ except ImportError as exc:
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
+DEFAULT_CONNECTION_STRING = "postgresql://walmart:walmart@localhost:5433/walmart"
 DEFAULT_INTERVAL_SECONDS = 60.0
 GENERATOR_ADVISORY_LOCK_ID = 2_026_073_001
 
@@ -109,19 +110,13 @@ def get_connection_string() -> str:
     if process_value:
         return process_value
 
-    if not ENV_FILE.is_file():
-        raise RuntimeError(
-            "POSTGRES_CONNECTION is not defined and the project .env file "
-            f"does not exist: {ENV_FILE}"
-        )
+    if ENV_FILE.is_file():
+        environment = read_environment(ENV_FILE)
+        if environment.get("POSTGRES_CONNECTION"):
+            return environment["POSTGRES_CONNECTION"]
 
-    environment = read_environment(ENV_FILE)
-    try:
-        return environment["POSTGRES_CONNECTION"]
-    except KeyError as exc:
-        raise RuntimeError(
-            f"POSTGRES_CONNECTION is missing from {ENV_FILE}"
-        ) from exc
+    # Local walmart-source-db container from airflow/docker-compose.yaml.
+    return DEFAULT_CONNECTION_STRING
 
 
 def connect(connection_string: str) -> PgConnection:

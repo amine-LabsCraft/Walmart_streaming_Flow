@@ -47,8 +47,7 @@ C:\Users\amine\OneDrive\Documents\Walmart Streaming Flow\Walmart Data Engineerin
 Variables attendues :
 
 ```dotenv
-GHOST_API_KEY=...
-POSTGRES_CONNECTION=postgresql://...
+POSTGRES_CONNECTION=postgresql://walmart:walmart@localhost:5433/walmart
 ```
 
 Pour Airflow :
@@ -63,7 +62,6 @@ Variables principales attendues :
 DATABRICKS_HOST=...
 DATABRICKS_TOKEN=...
 DATABRICKS_HTTP_PATH=...
-DATABRICKS_JOB_ID=...
 FERNET_KEY=...
 ```
 
@@ -102,6 +100,25 @@ Les services suivants doivent afficher `Up` ou `healthy` :
 - `airflow-worker`
 - `postgres`
 - `redis`
+- `walmart-source-db` (base source Walmart, remplace Ghost)
+
+### Base source locale
+
+`walmart-source-db` est un PostgreSQL 16 exposé sur `127.0.0.1:5433`
+(base `walmart`, utilisateur `walmart`, mot de passe `walmart`). Au premier
+démarrage, le volume vide est initialisé automatiquement : schéma `raw`,
+CSV de `Walmart dataset/data` puis migration `change_version`.
+
+Si le volume est recréé (`docker compose down -v`), réaligner la source sur
+ce que Databricks a déjà ingéré, sinon les nouveaux identifiants
+et `change_version` entreraient en collision avec le bronze :
+
+```powershell
+.\.venv\Scripts\python.exe airflow\walmart_dbt\tools\restore_source_from_bronze.py --apply
+```
+
+La tâche `ingest_cdc` du DAG lit cette base et pousse les lignes nouvelles ou
+modifiées vers `walmart.bronze_local` (création automatique au premier run).
 
 Ouvrir Airflow :
 
@@ -258,7 +275,7 @@ Après le succès du DAG, ouvrir Databricks SQL Editor et vérifier :
 
 ```sql
 SELECT COUNT(*) AS bronze_orders
-FROM walmart.bronze.orders;
+FROM walmart.bronze_local.orders;
 
 SELECT COUNT(*) AS silver_orders
 FROM walmart.silver_t.orders_t;

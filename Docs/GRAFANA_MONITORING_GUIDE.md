@@ -2,11 +2,11 @@
 
 ## Objectif
 
-La couche de monitoring observe le flux `Générateur → Ghost PostgreSQL → Airflow → Databricks → dbt Gold → Power BI`. Elle est optionnelle : le pipeline principal reste exécutable avec son fichier Compose historique uniquement.
+La couche de monitoring observe le flux `Générateur → PostgreSQL local → Airflow → Databricks → dbt Gold → Power BI`. Elle est optionnelle : le pipeline principal reste exécutable avec son fichier Compose historique uniquement.
 
 ```mermaid
 flowchart LR
-    Generator["Générateur Flask"] --> Source["Ghost PostgreSQL"]
+    Generator["Générateur Flask"] --> Source["PostgreSQL local"]
     Source --> Airflow["Airflow horaire"]
     Airflow --> Lakehouse["Databricks Bronze / Silver"]
     Lakehouse --> Gold["dbt Gold"]
@@ -47,10 +47,8 @@ Le démarrage historique reste inchangé :
 docker compose -f airflow/docker-compose.yaml up -d
 ```
 
-Après la copie du fichier d’exemple, recopiez uniquement la valeur
-`POSTGRES_CONNECTION` de `Walmart Data Engineering/.env` vers
-`airflow/monitoring/.env.monitoring`. Le `GHOST_API_KEY` n’est ni requis ni
-transmis aux conteneurs de monitoring.
+L’exporter lit directement le conteneur `walmart-source-db` : aucune URL de
+base source n’est à recopier dans `.env.monitoring`.
 
 ## Interfaces
 

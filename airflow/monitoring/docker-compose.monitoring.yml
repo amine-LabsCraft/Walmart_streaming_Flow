@@ -154,13 +154,15 @@ services:
       - ${ENV_FILE_PATH:-.env}
     environment:
       AIRFLOW_DB_CONNECTION: postgresql://airflow:airflow@postgres:5432/airflow
-      POSTGRES_CONNECTION: ${POSTGRES_CONNECTION:-}
+      POSTGRES_CONNECTION: postgresql://walmart:walmart@walmart-source-db:5432/walmart
       WALMART_EXPORTER_PORT: "9105"
       WALMART_EXPORTER_CACHE_SECONDS: "30"
       WALMART_DATABRICKS_METRICS_ENABLED: ${WALMART_DATABRICKS_METRICS_ENABLED:-false}
       WALMART_GOLD_TABLE: ${WALMART_GOLD_TABLE:-walmart.gold.fact_orders}
     depends_on:
       postgres:
+        condition: service_healthy
+      walmart-source-db:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:

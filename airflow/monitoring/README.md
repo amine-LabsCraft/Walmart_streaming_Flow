@@ -34,7 +34,7 @@ docker compose `
 Open Grafana at <http://127.0.0.1:3000> and Prometheus at <http://127.0.0.1:9090>.
 
 The local fallback Grafana credentials are `admin` / `walmart-local-only`. Change `GRAFANA_ADMIN_PASSWORD` in `.env.monitoring` before use.
-Copy the `POSTGRES_CONNECTION` value from `Walmart Data Engineering/.env` into the local `.env.monitoring` file so that the read-only source metrics can connect.
+The exporter reads the local `walmart-source-db` container directly; no source URL needs to be copied.
 
 ## Generator discovery
 

@@ -1,4 +1,4 @@
-"""Local web interface for the Ghost PostgreSQL source-event generator."""
+"""Local web interface for the PostgreSQL source-event generator."""
 
 from __future__ import annotations
 
@@ -297,11 +297,11 @@ class GeneratorController:
             self._thread = threading.Thread(
                 target=self._run,
                 daemon=True,
-                name="ghost-order-generator",
+                name="source-order-generator",
             )
             self._thread.start()
 
-        return True, "Connexion à Ghost en cours."
+        return True, "Connexion à PostgreSQL en cours."
 
     def stop(self) -> tuple[bool, str]:
         with self._lock:

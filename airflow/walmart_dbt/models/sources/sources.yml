@@ -1,7 +1,7 @@
 sources:
   - name: walmart_databricks
     database: walmart
-    schema: bronze
+    schema: "{{ env_var('WALMART_BRONZE_SCHEMA', 'bronze_local') }}"
     config:
       enabled: true
     tables:

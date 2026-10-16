@@ -3,7 +3,7 @@
 Ce guide décrit l'ordre à suivre chaque jour pour démarrer le projet complet :
 
 ```text
-Générateur → Ghost PostgreSQL → Airflow → Databricks → dbt Gold → Prometheus → Grafana
+Générateur → PostgreSQL local (Docker) → Airflow → Databricks → dbt Gold → Prometheus → Grafana
 ```
 
 Les commandes doivent être exécutées depuis la racine du projet :
@@ -56,9 +56,7 @@ Copy-Item `
   "airflow/monitoring/.env.monitoring"
 ```
 
-Puis recopier uniquement `POSTGRES_CONNECTION` depuis `Walmart Data Engineering/.env` vers `airflow/monitoring/.env.monitoring`.
-
-Ne pas recopier `GHOST_API_KEY` dans le fichier du monitoring.
+La base source est le conteneur `walmart-source-db` (port local `5433`). L'exporter s'y connecte directement : aucune URL de base n'est à recopier.
 
 ---
 
@@ -248,7 +246,7 @@ Le run est terminé lorsque le DAG et toutes ses tâches sont en vert.
 Dans Grafana, vérifier :
 
 - la disponibilité d'Airflow et de PostgreSQL ;
-- le nombre de commandes, `order_items` et clients dans Ghost PostgreSQL ;
+- le nombre de commandes, `order_items` et clients dans le PostgreSQL local ;
 - la date du dernier succès du pipeline ;
 - la durée des tâches Airflow ;
 - les logs Airflow et dbt dans Loki ;
