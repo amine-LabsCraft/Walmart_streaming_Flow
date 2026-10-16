@@ -301,7 +301,7 @@ class GeneratorController:
             )
             self._thread.start()
 
-        return True, "Connexion à PostgreSQL en cours."
+        return True, "Générateur démarré."
 
     def stop(self) -> tuple[bool, str]:
         with self._lock:
@@ -474,7 +474,7 @@ def api_customer_signup() -> Any:
         return jsonify(
             {
                 "ok": False,
-                "message": f"Sign up impossible dans PostgreSQL : {exc}",
+                "message": f"Inscription impossible dans PostgreSQL : {exc}",
             }
         ), 500
 
@@ -483,8 +483,8 @@ def api_customer_signup() -> Any:
         {
             "ok": True,
             "message": (
-                f"Client #{event['customer_id']} généré et inscrit. "
-                "Il est maintenant éligible aux prochaines commandes."
+                f"Client n° {event['customer_id']} inscrit. "
+                "Il peut recevoir les prochaines commandes."
             ),
             "customer": event,
         }
