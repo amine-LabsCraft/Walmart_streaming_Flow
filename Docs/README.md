@@ -14,6 +14,7 @@
 
 | Image | Source éditable |
 |---|---|
+| [Vue d'ensemble (logos)](images/overview.png) | [overview.svg](images/overview.svg) |
 | [Architecture](images/architecture.png) | [architecture.svg](images/architecture.svg) |
 | [DAG Airflow](images/airflow_dag.png) | [airflow_dag.svg](images/airflow_dag.svg) |
 | [Lignage dbt](images/dbt_lineage.png) | [dbt_lineage.svg](images/dbt_lineage.svg) |
@@ -28,3 +29,5 @@ Les PNG sont exportés à partir des SVG (rendu ×2). Modifiez le SVG, puis rég
 ```
 
 La taille `--window-size` doit correspondre aux attributs `width` et `height` du SVG.
+
+Les logos de `overview` viennent de [Simple Icons](https://simpleicons.org) (licence CC0) ; les marques appartiennent à leurs propriétaires. Le symbole Power BI est une forme redessinée.

@@ -4,113 +4,125 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Console opérationnelle des événements source Walmart.">
-  <title>Order Pulse · Source Control</title>
+  <meta name="theme-color" content="#071a36">
+  <title>Order Pulse · Pilotage source</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='generator_styles.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Aller au contenu principal</a>
+
   <div class="app-shell">
     <aside class="sidebar">
-      <a class="brand" href="/" aria-label="Order Pulse">
+      <a class="brand" href="/">
         <span class="spark-mark" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i><i></i>
         </span>
         <span>
           <strong>Order Pulse</strong>
-          <small>Source Control</small>
+          <small>Pilotage source</small>
         </span>
       </a>
 
-      <nav class="event-nav" aria-label="Événements source">
-        <p class="nav-label">Événements</p>
-        <button class="nav-item active" type="button" data-panel-target="orders" aria-controls="orders-panel" aria-selected="true">
-          <span class="nav-icon" aria-hidden="true">↗</span>
-          <span><strong>Commandes</strong><small>Génération continue</small></span>
-        </button>
-        <button class="nav-item" type="button" data-panel-target="signup" aria-controls="signup-panel" aria-selected="false">
-          <span class="nav-icon" aria-hidden="true">+</span>
-          <span><strong>Nouveau client</strong><small>Inscription source</small></span>
-        </button>
+      <nav class="event-nav" aria-label="Type d'événement">
+        <p class="nav-label" id="nav-label">Événements</p>
+        <div role="tablist" aria-labelledby="nav-label" aria-orientation="vertical">
+          <button class="nav-item active" type="button" role="tab" id="orders-tab"
+                  data-panel-target="orders" aria-controls="orders-panel" aria-selected="true">
+            <span class="nav-icon" aria-hidden="true">↗</span>
+            <span><strong>Commandes</strong><small>Génération continue</small></span>
+          </button>
+          <button class="nav-item" type="button" role="tab" id="signup-tab" tabindex="-1"
+                  data-panel-target="signup" aria-controls="signup-panel" aria-selected="false">
+            <span class="nav-icon" aria-hidden="true">+</span>
+            <span><strong>Nouveau client</strong><small>Inscription source</small></span>
+          </button>
+        </div>
       </nav>
 
       <div class="source-card">
-        <span class="source-card-icon" aria-hidden="true">DB</span>
+        <span class="source-card-icon" aria-hidden="true">PG</span>
         <div>
           <strong>PostgreSQL local</strong>
-          <small>Écriture transactionnelle</small>
+          <small>localhost:5433 · schéma raw</small>
         </div>
-        <span class="source-check" aria-label="Connecteur configuré">✓</span>
+        <span class="source-check" aria-hidden="true">✓</span>
+        <span class="visually-hidden">Connexion configurée</span>
       </div>
     </aside>
 
-    <main class="main-content">
+    <main class="main-content" id="main-content" tabindex="-1">
       <header class="topbar">
         <div>
-          <p class="breadcrumb">Walmart Streaming Flow <span>/</span> Source</p>
-          <h1>Source control room</h1>
+          <p class="breadcrumb">Walmart Streaming Flow <span aria-hidden="true">/</span> Source</p>
+          <h1>Pilotage des événements source</h1>
         </div>
-        <div class="connection-state" id="connection-state">
+        <div class="connection-state" id="connection-state" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
           <span id="connection-label">Prêt</span>
         </div>
       </header>
 
-      <section class="pipeline-rail" aria-label="Pipeline de données">
-        <div class="pipeline-node active">
-          <span class="node-icon">OP</span>
-          <span><strong>Source events</strong><small>temps réel</small></span>
-        </div>
-        <span class="rail-arrow" aria-hidden="true">→</span>
-        <div class="pipeline-node">
-          <span class="node-icon postgres">PG</span>
-          <span><strong>PostgreSQL</strong><small>raw</small></span>
-        </div>
-        <span class="rail-arrow" aria-hidden="true">→</span>
-        <div class="pipeline-node">
-          <span class="node-icon databricks">DBX</span>
-          <span><strong>Databricks</strong><small>Bronze → Gold</small></span>
-        </div>
-        <span class="rail-arrow" aria-hidden="true">→</span>
-        <div class="pipeline-node">
-          <span class="node-icon powerbi">BI</span>
-          <span><strong>Power BI</strong><small>dashboard</small></span>
-        </div>
-        <span class="pipeline-schedule">Traitement horaire</span>
+      <section class="pipeline-rail" aria-label="Chemin des données">
+        <ol>
+          <li class="pipeline-node active">
+            <span class="node-icon" aria-hidden="true">OP</span>
+            <span><strong>Order Pulse</strong><small>événements en continu</small></span>
+          </li>
+          <li class="pipeline-node">
+            <span class="node-icon postgres" aria-hidden="true">PG</span>
+            <span><strong>PostgreSQL</strong><small>schéma raw</small></span>
+          </li>
+          <li class="pipeline-node">
+            <span class="node-icon airflow" aria-hidden="true">AF</span>
+            <span><strong>Airflow</strong><small>ingestion + dbt</small></span>
+          </li>
+          <li class="pipeline-node">
+            <span class="node-icon databricks" aria-hidden="true">DBX</span>
+            <span><strong>Databricks</strong><small>Bronze → Gold</small></span>
+          </li>
+          <li class="pipeline-node">
+            <span class="node-icon powerbi" aria-hidden="true">BI</span>
+            <span><strong>Power BI</strong><small>tableaux de bord</small></span>
+          </li>
+        </ol>
+        <span class="pipeline-schedule">Traitement toutes les heures</span>
       </section>
 
       <section class="metrics" aria-label="Résumé de la session">
         <article>
-          <span class="metric-label">Commandes</span>
-          <div><strong id="orders-count">0</strong><small>injectées</small></div>
+          <h2 class="metric-label">Commandes</h2>
+          <p><strong id="orders-count">0</strong><small>créées</small></p>
         </article>
         <article>
-          <span class="metric-label">Inscriptions</span>
-          <div><strong id="signups-count">0</strong><small>nouveaux clients</small></div>
+          <h2 class="metric-label">Inscriptions</h2>
+          <p><strong id="signups-count">0</strong><small>nouveaux clients</small></p>
         </article>
         <article>
-          <span class="metric-label">Client récent</span>
-          <div><strong id="active-customer">—</strong><small>dernière commande</small></div>
+          <h2 class="metric-label">Dernier client</h2>
+          <p><strong id="active-customer">—</strong></p>
         </article>
         <article>
-          <span class="metric-label">Panier récent</span>
-          <div><strong id="last-total">—</strong><small>CAD</small></div>
+          <h2 class="metric-label">Dernier panier</h2>
+          <p><strong id="last-total">—</strong></p>
         </article>
       </section>
 
-      <section class="workspace">
+      <div class="workspace">
         <div class="control-column">
-          <section class="control-panel" id="orders-panel" data-panel="orders">
+          <section class="control-panel" id="orders-panel" data-panel="orders"
+                   role="tabpanel" aria-labelledby="orders-tab orders-title" tabindex="0">
             <div class="panel-heading">
               <div>
-                <span class="panel-kicker">Événement 01</span>
-                <h2>Générer des commandes</h2>
+                <span class="panel-kicker">Événement 1</span>
+                <h2 id="orders-title">Générer des commandes</h2>
               </div>
-              <span class="panel-table">orders + order_items</span>
+              <span class="panel-table" title="Tables écrites">orders + order_items</span>
             </div>
 
             <div class="generator-state">
-              <div class="countdown-ring" id="pulse-orbit">
+              <div class="countdown-ring" id="pulse-orbit" aria-hidden="true">
                 <strong id="countdown">10</strong>
-                <small>sec</small>
+                <small>s</small>
               </div>
               <div>
                 <span>Prochaine commande</span>
@@ -119,19 +131,24 @@
               </div>
             </div>
 
-            <form id="generator-form">
-              <label class="field-label" for="interval">Intervalle de génération</label>
+            <form id="generator-form" novalidate>
+              <label class="field-label" for="interval">Intervalle entre deux commandes</label>
               <div class="interval-control">
                 <div class="unit-input">
-                  <input id="interval" type="number" min="2" max="3600" step="1" value="10" required>
-                  <span>secondes</span>
+                  <input id="interval" name="interval" type="number" inputmode="numeric"
+                         min="2" max="3600" step="1" value="10" required
+                         aria-describedby="interval-hint interval-error">
+                  <span aria-hidden="true">secondes</span>
                 </div>
-                <div class="quick-times" aria-label="Intervalles rapides">
-                  <button type="button" data-interval="5">5 s</button>
-                  <button type="button" data-interval="10" class="selected">10 s</button>
-                  <button type="button" data-interval="30">30 s</button>
+                <div class="quick-times" role="group" aria-label="Intervalles prédéfinis">
+                  <button type="button" data-interval="5" aria-pressed="false">5 s</button>
+                  <button type="button" data-interval="10" aria-pressed="true" class="selected">10 s</button>
+                  <button type="button" data-interval="30" aria-pressed="false">30 s</button>
                 </div>
               </div>
+              <p class="field-hint" id="interval-hint">Entre 2 et 3 600 secondes.</p>
+              <p class="field-error" id="interval-error" hidden></p>
+
               <div class="action-row">
                 <button class="primary-button" id="start-button" type="submit">
                   <span aria-hidden="true">▶</span> Démarrer
@@ -145,45 +162,46 @@
 
             <div class="business-rule">
               <span aria-hidden="true">✓</span>
-              <p><strong>Intégrité garantie.</strong> Chaque employé appartient au magasin de la commande et toutes les entités sont actives.</p>
+              <p><strong>Intégrité garantie.</strong> Chaque commande utilise des entités actives, et l'employé appartient au magasin de la commande.</p>
             </div>
           </section>
 
-          <section class="control-panel" id="signup-panel" data-panel="signup" hidden>
+          <section class="control-panel" id="signup-panel" data-panel="signup"
+                   role="tabpanel" aria-labelledby="signup-tab signup-title" tabindex="0" hidden>
             <div class="panel-heading">
               <div>
-                <span class="panel-kicker yellow">Événement 02</span>
-                <h2>Inscrire un client</h2>
+                <span class="panel-kicker yellow">Événement 2</span>
+                <h2 id="signup-title">Inscrire un client</h2>
               </div>
-              <span class="panel-table">customers</span>
+              <span class="panel-table" title="Table écrite">customers</span>
             </div>
 
             <p class="panel-intro">
-              Créez un client actif dans PostgreSQL. Il rejoint immédiatement
-              la population éligible aux prochaines commandes.
+              Crée un client actif dans PostgreSQL. Il peut recevoir des commandes
+              immédiatement, sans redémarrer le générateur.
             </p>
 
             <div class="profile-generator">
               <div class="profile-visual">
-                <span class="auto-avatar" aria-hidden="true">AI</span>
+                <span class="auto-avatar" aria-hidden="true">✦</span>
                 <div>
-                  <strong>Profil synthétique automatique</strong>
+                  <strong>Profil généré automatiquement</strong>
                   <small>Identité canadienne cohérente et unique</small>
                 </div>
-                <span class="auto-badge">AUTO</span>
+                <span class="auto-badge">Auto</span>
               </div>
-              <ul class="generated-fields">
-                <li><span>Identité</span><strong>Prénom + nom aléatoires</strong></li>
-                <li><span>Contact</span><strong>E-mail unique + téléphone</strong></li>
-                <li><span>Localisation</span><strong>Ville et province cohérentes</strong></li>
-                <li><span>Statut</span><strong class="active-value">Actif · Y</strong></li>
-              </ul>
+              <dl class="generated-fields">
+                <div><dt>Identité</dt><dd>Prénom et nom aléatoires</dd></div>
+                <div><dt>Contact</dt><dd>E-mail unique et téléphone</dd></div>
+                <div><dt>Localisation</dt><dd>Ville et province cohérentes</dd></div>
+                <div><dt>Statut</dt><dd class="active-value">Actif</dd></div>
+              </dl>
             </div>
 
             <div class="last-signup" id="last-signup-preview" hidden>
-              <div class="last-signup-avatar" id="signup-preview-initials">—</div>
+              <div class="last-signup-avatar" id="signup-preview-initials" aria-hidden="true">—</div>
               <div>
-                <span>Dernier profil généré</span>
+                <span>Dernier client inscrit</span>
                 <strong id="signup-preview-name">—</strong>
                 <small id="signup-preview-email">—</small>
               </div>
@@ -194,27 +212,22 @@
             </div>
 
             <button class="signup-button" id="signup-button" type="button">
-              <span aria-hidden="true">✦</span> Générer un sign up
+              <span aria-hidden="true">+</span> Inscrire un client
             </button>
             <p class="feedback" id="signup-feedback" role="status" aria-live="polite"></p>
-
-            <div class="business-rule signup-rule">
-              <span aria-hidden="true">↻</span>
-              <p><strong>Réutilisable immédiatement.</strong> Aucun redémarrage du générateur n’est nécessaire.</p>
-            </div>
           </section>
         </div>
 
         <section class="stream-panel" aria-labelledby="stream-title">
           <div class="stream-heading">
             <div>
-              <span class="live-label"><i></i> Live</span>
-              <h2 id="stream-title">Flux PostgreSQL</h2>
+              <span class="live-label"><i aria-hidden="true"></i> En direct</span>
+              <h2 id="stream-title">Activité PostgreSQL</h2>
             </div>
-            <div class="stream-filters" aria-label="Filtrer les événements">
-              <button type="button" class="active" data-event-filter="all">Tous</button>
-              <button type="button" data-event-filter="order">Commandes</button>
-              <button type="button" data-event-filter="customer_signup">Clients</button>
+            <div class="stream-filters" role="group" aria-label="Filtrer l'activité">
+              <button type="button" class="active" aria-pressed="true" data-event-filter="all">Tout</button>
+              <button type="button" aria-pressed="false" data-event-filter="order">Commandes</button>
+              <button type="button" aria-pressed="false" data-event-filter="customer_signup">Clients</button>
             </div>
           </div>
 
@@ -225,20 +238,21 @@
             <span>Heure</span>
           </div>
 
-          <div class="event-stream" id="activity-list">
+          <div class="event-stream" id="activity-list" tabindex="0"
+               role="region" aria-label="Liste des derniers événements">
             <div class="empty-state">
-              <span class="empty-icon">⌁</span>
-              <strong>Le flux est prêt</strong>
-              <p>Démarrez les commandes ou créez un client pour voir les événements arriver ici.</p>
+              <span class="empty-icon" aria-hidden="true">⌁</span>
+              <strong>Aucune activité pour l'instant</strong>
+              <p>Démarrez les commandes ou inscrivez un client : les événements apparaîtront ici.</p>
             </div>
           </div>
         </section>
-      </section>
+      </div>
 
       <footer class="footer-note">
-        <span>Les secrets restent côté serveur</span>
-        <span>Transactions atomiques</span>
-        <span>CDC compatible</span>
+        <span>Identifiants de connexion gardés côté serveur</span>
+        <span>Écritures transactionnelles</span>
+        <span>Curseur CDC change_version</span>
       </footer>
     </main>
   </div>

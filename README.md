@@ -17,6 +17,10 @@
 
 </div>
 
+![Walmart Streaming Flow technology overview](Docs/images/overview.png)
+
+<sub>Browser UI → Python generator → Docker (PostgreSQL, Airflow + Redis/Celery, dbt, Prometheus, Grafana) → Databricks → Power BI. Dashed arrows are metrics.</sub>
+
 ![Walmart Streaming Flow architecture](Docs/images/architecture.png)
 
 ---
