@@ -145,7 +145,7 @@ class CachedCollector:
                 "duration": time.monotonic() - started,
             }
         except Exception:
-            LOGGER.exception("Ghost PostgreSQL metrics collection failed")
+            LOGGER.exception("Source PostgreSQL metrics collection failed")
             return {"up": 0.0, "duration": time.monotonic() - started}
 
     def _airflow_values(self) -> dict[str, float]:
@@ -296,7 +296,7 @@ class CachedCollector:
 
     def collect(self):
         source = self._cached("source", self._source_values)
-        yield self.gauge("walmart_source_up", "Ghost source connection status.", source.get("up", 0.0))
+        yield self.gauge("walmart_source_up", "Source PostgreSQL connection status.", source.get("up", 0.0))
         yield self.gauge("walmart_source_orders", "Rows in raw.orders.", source.get("orders", 0.0))
         yield self.gauge("walmart_source_order_items", "Rows in raw.order_items.", source.get("order_items", 0.0))
         yield self.gauge("walmart_source_customers", "Rows in raw.customers.", source.get("customers", 0.0))

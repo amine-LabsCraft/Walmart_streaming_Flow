@@ -503,7 +503,7 @@
           "refId": "C"
         }
       ],
-      "title": "Ghost Source Volume",
+      "title": "Source Volume",
       "type": "timeseries"
     },
     {

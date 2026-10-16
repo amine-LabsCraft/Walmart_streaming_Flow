@@ -98,6 +98,14 @@ x-airflow-common:
     DBT_SCHEMA: ${DBT_SCHEMA:-dbt_schema}
     DBT_THREADS: ${DBT_THREADS:-1}
 
+    # ==========================================================
+    # Local Walmart source (replaces Ghost PostgreSQL)
+    # ==========================================================
+
+    WALMART_SOURCE_DB_URL: >-
+      postgresql://walmart:walmart@walmart-source-db:5432/walmart
+    WALMART_BRONZE_SCHEMA: ${WALMART_BRONZE_SCHEMA:-bronze_local}
+
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -144,6 +152,41 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+    restart: always
+
+  # ============================================================
+  # Walmart source PostgreSQL (local replacement for Ghost)
+  # ============================================================
+
+  walmart-source-db:
+    image: postgres:16
+
+    environment:
+      POSTGRES_USER: walmart
+      POSTGRES_PASSWORD: walmart
+      POSTGRES_DB: walmart
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - walmart-source-db-volume:/var/lib/postgresql/data
+      - "../Walmart Data Engineering/Walmart dataset:/seed:ro"
+      - "../Walmart Data Engineering/Walmart dataset/docker-init:/docker-entrypoint-initdb.d:ro"
+
+    healthcheck:
+      test:
+        - CMD
+        - pg_isready
+        - -U
+        - walmart
+        - -d
+        - walmart
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
     restart: always
 
@@ -324,3 +367,4 @@ services:
          
 volumes:
   postgres-db-volume:
+  walmart-source-db-volume:

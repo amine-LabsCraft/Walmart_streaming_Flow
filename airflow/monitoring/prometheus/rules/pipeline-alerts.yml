@@ -7,7 +7,7 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Ghost PostgreSQL source unavailable"
+          summary: "Source PostgreSQL unavailable"
           description: "The read-only source check has failed for more than two minutes."
 
       - alert: WalmartHourlyPipelineLate

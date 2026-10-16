@@ -1,16 +1,11 @@
 
 import os
-import time
 from datetime import datetime
 
 from airflow.sdk import dag, task
 from airflow.providers.standard.operators.bash import BashOperator
 
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.jobs import (
-    RunLifeCycleState,
-    RunResultState,
-)
+from walmart_ingestion import sync_source_to_bronze
 
 
 @dag(
@@ -25,76 +20,21 @@ def orchestrate():
     @task
     def ingest_cdc():
         """
-        Trigger the Databricks CDC ingestion job
-        and wait until the job finishes.
+        Push new and changed rows from the local Walmart source
+        PostgreSQL into the Databricks bronze schema.
         """
 
-        # Retrieve Databricks credentials from environment variables.
-        # The actual values must be stored in .env
-        # and must NOT be committed to Git.
-        databricks_host = os.environ["DATABRICKS_HOST"]
-        databricks_token = os.environ["DATABRICKS_TOKEN"]
-
-        ws = WorkspaceClient(
-            host=databricks_host,
-            token=databricks_token,
+        # Credentials come from .env and must NOT be committed to Git.
+        synced = sync_source_to_bronze(
+            source_url=os.environ["WALMART_SOURCE_DB_URL"],
+            server_hostname=os.environ["DATABRICKS_HOST"],
+            http_path=os.environ["DATABRICKS_HTTP_PATH"],
+            access_token=os.environ["DATABRICKS_TOKEN"],
+            catalog=os.environ.get("DBT_CATALOG", "walmart"),
+            schema=os.environ.get("WALMART_BRONZE_SCHEMA", "bronze_local"),
         )
 
-        # Trigger Databricks job
-        job_trigger = ws.jobs.run_now(
-            job_id="984394399040296"
-        )
-
-        print(
-            f"Databricks job triggered successfully. "
-            f"Run ID: {job_trigger.run_id}"
-        )
-
-        # Wait for the Databricks job to finish
-        while True:
-
-            job_run = ws.jobs.get_run(
-                job_trigger.run_id
-            )
-
-            lifecycle_state = (
-                job_run.state.life_cycle_state
-            )
-
-            result_state = (
-                job_run.state.result_state
-            )
-
-            print(
-                f"Databricks job status: "
-                f"{lifecycle_state}"
-            )
-
-            # Job finished
-            if lifecycle_state in [
-                RunLifeCycleState.TERMINATED,
-                RunLifeCycleState.SKIPPED,
-                RunLifeCycleState.INTERNAL_ERROR,
-            ]:
-
-                if result_state == RunResultState.SUCCESS:
-                    print(
-                        "Databricks CDC job "
-                        "completed successfully!"
-                    )
-                    break
-
-                else:
-                    raise Exception(
-                        f"Databricks job failed "
-                        f"with result state: "
-                        f"{result_state}"
-                    )
-
-            # Wait before checking again
-            time.sleep(5)
-
-        return "CDC Ingestion Completed"
+        return synced
 
     @task.bash
     def clean_target():
