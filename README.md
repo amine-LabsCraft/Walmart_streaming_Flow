@@ -152,10 +152,14 @@ Walmart Streaming Flow/
 
 ---
 
-<div align="center">
+## 👤 Auteur
 
-### Amine Ait Ali
+**Amine Ait Ali**  
+Data Engineering · Lakehouse Architecture · Analytics Engineering
 
-**Data Engineering · Lakehouse Architecture · Analytics Engineering**
+[![GitHub](https://img.shields.io/badge/GitHub-amine--LabsCraft-181717?style=flat&logo=github)](https://github.com/amine-LabsCraft)
+[![Portfolio](https://img.shields.io/badge/Portfolio-amine--aitali--5752.netlify.app-00C7B7?style=flat&logo=netlify&logoColor=white)](https://amine-aitali-5752.netlify.app/)
 
-</div>
+**Stack :** PostgreSQL · Python · Databricks · Delta Lake · dbt · Apache Airflow · Power BI
+
+> Ce projet a été conçu pour démontrer comment correction opérationnelle, traitement incrémental, qualité des données, orchestration et sémantique BI s'articulent au sein d'un pipeline observable.
