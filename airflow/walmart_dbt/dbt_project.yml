@@ -9,6 +9,12 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
+# CDC overlap re-read by the silver_t models (see macros/incremental_cdc_filter.sql).
+# Keep in line with CHANGE_VERSION_OVERLAP / TIMESTAMP_OVERLAP in dags/walmart_ingestion.py.
+vars:
+  cdc_overlap_versions: 1000
+  cdc_overlap_minutes: 10
+
 clean-targets:
   - "target"
   - "dbt_packages"
@@ -27,10 +33,11 @@ models:
       ephemeral:
         +materialized: ephemeral
 
+# SCD2 history lives outside the star schema, in its own schema.
 snapshots:
   walmart_dbt:
     +database: walmart
-    +schema: gold
+    +schema: snapshots
     +strategy: timestamp
     # Current versions get an open-ended validity date instead of NULL.
     +dbt_valid_to_current: "to_date('9999-12-31')"

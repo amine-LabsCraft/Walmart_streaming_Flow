@@ -13,7 +13,7 @@
 [![Airflow](https://img.shields.io/badge/Airflow-Hourly%20DAG-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
 [![Power BI](https://img.shields.io/badge/Power%20BI-Star%20schema-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
 
-[Architecture](Docs/ARCHITECTURE.md) · [Data model](Docs/DATA_MODEL.md) · [Runbook](Docs/RUNBOOK.md) · [Monitoring](Docs/MONITORING.md) · [Power BI](Docs/POWER_BI.md)
+[Architecture](Docs/ARCHITECTURE.md) · [Business rules](Docs/BUSINESS_RULES.md) · [Data model](Docs/DATA_MODEL.md) · [Runbook](Docs/RUNBOOK.md) · [Monitoring](Docs/MONITORING.md) · [Power BI](Docs/POWER_BI.md)
 
 </div>
 
@@ -34,13 +34,14 @@ Two independent clocks, like a real data platform:
 
 | Concern | Implementation |
 |---|---|
+| Supermarket logic | 25 Canadian supercentres, opening hours in local time, home-store customers, grocery-led baskets, cashier vs online picker, Pending → Completed / Cancelled → Returned lifecycle |
 | Relational correctness | Existing active customers and products only; the employee belongs to the order's store |
 | Transaction safety | Order header and items commit or roll back together; advisory lock for id allocation |
 | Change capture | Monotonic `change_version` assigned by a trigger on every order / item insert or update |
 | Ingestion | Airflow task reads past the bronze watermark and `MERGE`s into `walmart.bronze_local` (idempotent) |
-| Modeling | Bronze → Silver technical → Silver business (`obt_b`) → Gold |
-| History | dbt timestamp snapshots (SCD2) for five dimensions |
-| Data quality | 120 dbt tests: keys, relationships, amounts, timestamps, business reconciliation |
+| Modeling | Bronze → Silver technical → Silver business (`obt_b`) → Gold Kimball star schema (1 fact, 7 dimensions) |
+| History | dbt timestamp snapshots (SCD2) in a separate `snapshots` schema; dimensions expose the current version |
+| Data quality | 131 dbt tests: keys, relationships, amounts, timestamps, statuses, opening hours, employee roles, business reconciliation |
 | Orchestration | Airflow 3 · CeleryExecutor · Redis · PostgreSQL metadata |
 | Observability | Prometheus, Grafana (4 dashboards), Loki, Alloy, custom exporter, alert rules |
 | Reproducibility | Docker Compose, `uv` lock file, environment-driven configuration |
@@ -52,7 +53,7 @@ Two independent clocks, like a real data platform:
 1. **Order Pulse** (Flask UI) inserts an order and its items in one transaction into `walmart-source-db` (`raw` schema).
 2. PostgreSQL triggers assign the next `change_version`.
 3. Every hour, the Airflow DAG `orchestrate` starts with `ingest_cdc`, which merges new or changed rows into `walmart.bronze_local`.
-4. dbt merges six incremental Silver models, builds `obt_b`, snapshots five dimensions, and publishes `fact_orders`. A failing test stops the run.
+4. dbt merges six incremental Silver models, builds `obt_b`, records the SCD2 history, builds the seven star dimensions and publishes `fact_orders`. A failing test stops the run.
 5. Power BI reads the Gold star schema through the Databricks SQL Warehouse.
 
 ![Airflow DAG](Docs/images/airflow_dag.png)
@@ -68,10 +69,15 @@ Two independent clocks, like a real data platform:
 | Bronze | `bronze_local` | `orders`, `order_items`, `customers`, `products`, `stores`, `employees` | Delta tables written by `ingest_cdc` |
 | Silver technical | `silver_t` | `*_t` | Incremental `merge` |
 | Silver business | `silver_b` | `obt_b` (one row per order item) | Table |
-| Gold dimensions | `gold` | `dim_customers`, `dim_products`, `dim_stores`, `dim_employees`, `dim_orders` | Snapshots SCD2 |
-| Gold fact | `gold` | `fact_orders` (grain `order_item_id`) | Table |
+| SCD2 history | `snapshots` | `customers_snapshot`, `products_snapshot`, `stores_snapshot`, `employees_snapshot`, `orders_snapshot` | dbt snapshots (audit trail) |
+| Gold dimensions | `gold` | `dim_date`, `dim_time`, `dim_order_profile`, `dim_customer`, `dim_product`, `dim_store`, `dim_employee` | Tables, one row per key |
+| Gold fact | `gold` | `fact_orders` (grain `order_item_id`) | Table, keys + additive measures |
 
-Use `SUM(sales_amount)` for revenue and `DISTINCTCOUNT(order_id)` for orders. Never sum `order_total_amount`: it is repeated on every item of the order. Details are in [Docs/DATA_MODEL.md](Docs/DATA_MODEL.md).
+### Star schema
+
+![Gold star schema](Docs/images/star_schema.png)
+
+`fact_orders` only holds foreign keys, the degenerate `order_id` and additive measures. Each of the seven dimensions has a unique key, and every fact key is tested against its dimension. Use `DISTINCTCOUNT(order_id)` for orders (one generated order = +1) and `SUM(net_sales_amount)` for net revenue (completed orders only). Details are in [Docs/DATA_MODEL.md](Docs/DATA_MODEL.md).
 
 ---
 
@@ -147,7 +153,7 @@ Walmart Streaming Flow/
 | `change_version` cursor | Total ordering of order / item changes | Trigger and sequence maintained in the source |
 | Dimensions read from Silver | Complete dimensions, including entities without orders | — |
 | `obt_b` before the fact | Conformed joins in one place | Wide table rebuilt every run |
-| dbt snapshots | Standard, auditable SCD2 history | Snapshot tables grow over time |
+| Star schema with current dimensions + separate SCD2 history | One row per key, simple 1:* BI relations, history kept for audit | "As-of" analysis needs a join to the snapshots |
 | Line-level fact | Correct product and quantity analytics | Header totals need careful BI measures |
 
 ---

@@ -1026,6 +1026,18 @@ button[aria-busy="true"] { cursor: progress; }
   font-variant-numeric: tabular-nums;
 }
 
+.pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font: 650 var(--text-xs)/1.6 "Segoe UI", sans-serif;
+  vertical-align: 1px;
+}
+
+.pill-store { color: var(--blue-dark); background: var(--blue-soft); }
+.pill-online { color: var(--yellow-dark); background: var(--yellow-soft); }
+
 .empty-state {
   display: grid;
   min-height: 360px;

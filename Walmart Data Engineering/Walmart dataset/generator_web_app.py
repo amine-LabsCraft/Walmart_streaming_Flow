@@ -22,12 +22,14 @@ from prometheus_client import (
     generate_latest,
 )
 
+import business_rules as rules
 from continuous_order_generator import (
     GeneratedOrder,
+    advance_lifecycle,
     connect,
     create_order,
     get_connection_string,
-    select_customer,
+    keep_system_awake,
 )
 
 
@@ -65,6 +67,11 @@ GENERATOR_INTERVAL = Gauge(
 GENERATOR_LAST_ORDER = Gauge(
     "walmart_generator_last_order_timestamp_seconds",
     "Unix timestamp of the most recently generated order.",
+)
+LIFECYCLE_EVENTS = Counter(
+    "walmart_generator_lifecycle_events_total",
+    "Order status changes and price changes applied by the generator.",
+    ("event_type",),
 )
 GENERATOR_ORDER_ITEMS = Histogram(
     "walmart_generator_order_items",
@@ -130,18 +137,6 @@ LAST_NAMES = (
     "Girard", "Lavoie", "Martin", "Morin", "Nguyen", "Roy",
     "Simard", "Tremblay", "Wong",
 )
-LOCATIONS = (
-    ("Montréal", "Québec", "Canada", "514"),
-    ("Québec", "Québec", "Canada", "418"),
-    ("Toronto", "Ontario", "Canada", "416"),
-    ("Ottawa", "Ontario", "Canada", "613"),
-    ("Vancouver", "Colombie-Britannique", "Canada", "604"),
-    ("Calgary", "Alberta", "Canada", "403"),
-    ("Edmonton", "Alberta", "Canada", "780"),
-    ("Halifax", "Nouvelle-Écosse", "Canada", "902"),
-    ("Winnipeg", "Manitoba", "Canada", "204"),
-)
-EMAIL_DOMAINS = ("mail.ca", "inbox.ca", "clientmail.ca")
 
 app = Flask(__name__)
 
@@ -164,6 +159,9 @@ def order_to_dict(order: GeneratedOrder) -> dict[str, Any]:
         "store_name": order.store_employee.store_name,
         "employee_id": order.store_employee.employee_id,
         "employee_name": order.store_employee.employee_name,
+        "channel": order.channel,
+        "status": order.status,
+        "payment_method": order.payment_method,
         "order_item_count": order.order_item_count,
         "total_amount": str(order.total_amount),
         "generated_at": utc_iso(),
@@ -182,7 +180,7 @@ def email_slug(value: str) -> str:
 
 
 def create_customer_signup() -> dict[str, Any]:
-    """Generate and persist one synthetic, active Canadian customer."""
+    """Generate and persist one active customer living near a supercentre."""
 
     connection = connect(get_connection_string())
     try:
@@ -198,10 +196,15 @@ def create_customer_signup() -> dict[str, Any]:
 
             first_name = RANDOM.choice(FIRST_NAMES)
             last_name = RANDOM.choice(LAST_NAMES)
-            city, province, country, area_code = RANDOM.choice(LOCATIONS)
-            domain = RANDOM.choice(EMAIL_DOMAINS)
+            # New customers sign up around a store, in proportion to its footfall.
+            home_store = rules.STORES[rules.weighted_choice(
+                RANDOM, {s.store_id: s.traffic_weight for s in rules.STORES.values()}
+            )]
+            city, province, country = home_store.city, home_store.province, "Canada"
+            area_code = home_store.area_code
+            domain = RANDOM.choice(rules.email_domains(province))
             email = (
-                f"{email_slug(first_name)}.{email_slug(last_name)}."
+                f"{email_slug(first_name)}.{email_slug(last_name)}"
                 f"{customer_id}@{domain}"
             )
             phone = (
@@ -321,18 +324,13 @@ class GeneratorController:
             self._last_signup = event
             self._activity.appendleft(event)
 
-    def _next_random_customer(self, connection: Any, previous_id: int | None) -> Any:
-        customer = select_customer(connection, None)
-        for _ in range(5):
-            if customer.customer_id != previous_id:
-                break
-            customer = select_customer(connection, None)
-        return customer
-
     def _run(self) -> None:
+        # The PC must not fall asleep while orders stream into the source.
+        with keep_system_awake():
+            self._generate()
+
+    def _generate(self) -> None:
         connection = None
-        previous_store_id: int | None = None
-        previous_customer_id: int | None = None
 
         try:
             connection = connect(get_connection_string())
@@ -341,22 +339,22 @@ class GeneratorController:
                 set_generator_mode(self._mode)
 
             while not self._stop_event.is_set():
-                customer = self._next_random_customer(
-                    connection,
-                    previous_customer_id,
-                )
-                order = create_order(
-                    connection,
-                    customer=customer,
-                    previous_store_id=previous_store_id,
-                )
-                previous_customer_id = customer.customer_id
-                previous_store_id = order.store_employee.store_id
+                # Exactly one order per tick; the lifecycle step only updates.
+                order = create_order(connection)
+                lifecycle = advance_lifecycle(connection)
                 serialized = order_to_dict(order)
 
                 with self._lock:
-                    self._active_customer_id = customer.customer_id
-                    self._active_customer_name = customer.display_name
+                    self._active_customer_id = order.customer.customer_id
+                    self._active_customer_name = order.customer.display_name
+                    for event_type, count in (
+                        ("completed", lifecycle.completed),
+                        ("cancelled", lifecycle.cancelled),
+                        ("returned", lifecycle.returned),
+                        ("repriced", lifecycle.repriced),
+                    ):
+                        if count:
+                            LIFECYCLE_EVENTS.labels(event_type=event_type).inc(count)
                     self._orders_generated += 1
                     ORDER_EVENTS.inc()
                     GENERATOR_ORDER_ITEMS.observe(order.order_item_count)

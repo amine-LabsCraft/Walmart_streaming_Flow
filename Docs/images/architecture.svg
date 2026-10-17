@@ -31,7 +31,7 @@
   <rect x="60" y="170" width="260" height="120" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
   <text x="80" y="200" class="box-title">Order Pulse</text>
   <text x="80" y="224" class="text">Interface web Flask · :5050</text>
-  <text x="80" y="246" class="small">Commandes continues (1 à 5 articles)</text>
+  <text x="80" y="246" class="small">Commandes continues (1 à 7 articles)</text>
   <text x="80" y="266" class="small">Inscription de nouveaux clients</text>
 
   <!-- Source DB -->
@@ -61,7 +61,7 @@
   <text x="418" y="388" class="small">source_freshness</text>
   <text x="418" y="408" class="small">silver_technical → silver_technical_tests</text>
   <text x="418" y="428" class="small">silver_business → silver_business_tests</text>
-  <text x="418" y="448" class="small">gold_dimensions (snapshots SCD2)</text>
+  <text x="418" y="448" class="small">gold_dimensions (historique SCD2 + dimensions)</text>
   <text x="418" y="468" class="small">gold_facts → gold_facts_tests</text>
   <text x="418" y="488" class="small">Projet : airflow/walmart_dbt</text>
 
@@ -132,10 +132,10 @@
 
   <rect x="1010" y="560" width="360" height="130" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
   <text x="1030" y="588" class="box-title">Gold · gold</text>
-  <text x="1030" y="612" class="small">dim_customers · dim_products · dim_stores</text>
-  <text x="1030" y="632" class="small">dim_employees · dim_orders (snapshots SCD2)</text>
-  <text x="1030" y="656" class="label">fact_orders</text>
-  <text x="1030" y="676" class="small">grain : une ligne par order_item_id</text>
+  <text x="1030" y="612" class="small">schéma en étoile : fact_orders (ligne de commande)</text>
+  <text x="1030" y="632" class="small">dim_customer · dim_product · dim_store · dim_employee</text>
+  <text x="1030" y="656" class="small">dim_date · dim_time · dim_order_profile</text>
+  <text x="1030" y="676" class="small">historique SCD2 : walmart.snapshots</text>
 
   <rect x="1010" y="720" width="360" height="120" rx="12" fill="#ffffff" stroke="#ff3621" stroke-width="2"/>
   <text x="1030" y="748" class="box-title">SQL Warehouse</text>

@@ -13,11 +13,5 @@ SELECT
 FROM {{ source('walmart_databricks', 'customers') }} AS source_data
 
 {% if is_incremental() %}
-WHERE source_data.updated_timestamp >= (
-    SELECT COALESCE(
-        MAX(target_data.updated_timestamp),
-        CAST('1900-01-01' AS TIMESTAMP)
-    )
-    FROM {{ this }} AS target_data
-)
+{{ incremental_cdc_filter('updated_timestamp') }}
 {% endif %}

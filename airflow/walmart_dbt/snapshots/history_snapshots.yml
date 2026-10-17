@@ -1,42 +1,43 @@
 version: 2
 
-# Shared snapshot settings (catalog, schema, strategy, open-ended validity)
-# are defined once in dbt_project.yml.
+# SCD2 history (audit trail), stored in the walmart.snapshots schema.
+# The star schema reads their current version through models/gold/dim.
+# Shared settings (strategy, open-ended validity) live in dbt_project.yml.
 
 snapshots:
 
-  - name: dim_customers
-    description: Historique SCD2 des clients (une version par changement).
+  - name: customers_snapshot
+    description: Historique SCD2 des clients.
     relation: ref('eph_customers')
     config:
       unique_key: customer_id
       updated_at: customer_updated_timestamp
 
-  - name: dim_employees
-    description: Historique SCD2 des employés et de leur magasin de rattachement.
+  - name: employees_snapshot
+    description: Historique SCD2 des employés (poste, salaire, magasin).
     relation: ref('eph_employees')
     config:
       unique_key: employee_id
       updated_at: employee_updated_timestamp
 
-  - name: dim_products
-    description: Historique SCD2 des produits, prix courant inclus.
+  - name: products_snapshot
+    description: Historique SCD2 des produits, dont l'évolution des prix.
     relation: ref('eph_products')
     config:
       unique_key: product_id
       updated_at: product_updated_timestamp
 
-  - name: dim_stores
+  - name: stores_snapshot
     description: Historique SCD2 des magasins.
     relation: ref('eph_stores')
     config:
       unique_key: store_id
       updated_at: store_updated_timestamp
 
-  - name: dim_orders
+  - name: orders_snapshot
     description: >-
-      Historique SCD2 des en-têtes de commande. order_item_id est la plus petite
-      ligne de la commande et sert de clé de rapprochement avec fact_orders.
+      Historique du cycle de vie des commandes (Pending, Completed,
+      Cancelled, Returned). Table d'audit, pas une dimension.
     relation: ref('eph_orders')
     config:
       unique_key: order_id

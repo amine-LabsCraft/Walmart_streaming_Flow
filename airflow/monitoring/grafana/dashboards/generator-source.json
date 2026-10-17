@@ -419,14 +419,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "increase(walmart_generator_orders_total[1m])",
+          "expr": "clamp_min(walmart_generator_orders_total - (walmart_generator_orders_total offset 1m), 0)",
           "legendFormat": "Orders / min",
           "range": true,
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "increase(walmart_generator_signups_total[1m])",
+          "expr": "clamp_min(walmart_generator_signups_total - (walmart_generator_signups_total offset 1m), 0)",
           "legendFormat": "Signups / min",
           "range": true,
           "refId": "B"

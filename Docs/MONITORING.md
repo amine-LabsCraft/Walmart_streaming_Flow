@@ -116,6 +116,8 @@ docker compose `
 
 Cette option utilise l’API Databricks Statement Execution avec une requête agrégée en lecture seule. Elle reste désactivée par défaut pour éviter de démarrer le SQL Warehouse uniquement pour le monitoring.
 
+> **Coût** : le Gold n'est reconstruit qu'une fois par heure. L'exporter garde donc son résultat en cache pendant `WALMART_GOLD_CACHE_SECONDS` (900 s par défaut), contre 30 s pour les métriques locales. Avec un cache de 30 s, le SQL Warehouse recevait une requête toutes les 30 secondes et ne s'arrêtait jamais (facturation en continu). Ne descendez pas sous la durée d'arrêt automatique du warehouse.
+
 ## Règles de sécurité et non-régression
 
 - Grafana et Prometheus sont liés à `127.0.0.1`.
