@@ -50,6 +50,15 @@ const STATUS_COPY = {
   error: { label: "Erreur", title: "Action requise", tab: "⚠ Erreur · " }
 };
 
+// Business vocabulary shown to users (database values stay in English).
+const CHANNEL_LABELS = { "In-store": "En magasin", Online: "En ligne" };
+const STATUS_LABELS = {
+  Completed: "payée",
+  Pending: "en préparation",
+  Cancelled: "annulée",
+  Returned: "retournée"
+};
+
 let currentFilter = "all";
 let latestActivity = [];
 let lastSignature = "";
@@ -171,8 +180,11 @@ function orderRow(item) {
     escapeHtml(item.customer_id), "</small></div>",
     '<div class="event-context"><strong class="amount">',
     money.format(Number(item.total_amount)),
-    "</strong><small>", escapeHtml(items), items > 1 ? " articles" : " article",
-    " · ", escapeHtml(item.employee_name), "</small></div>",
+    ' <span class="pill pill-', item.channel === "Online" ? "online" : "store", '">',
+    escapeHtml(CHANNEL_LABELS[item.channel] || item.channel), " · ",
+    escapeHtml(STATUS_LABELS[item.status] || item.status), "</span>",
+    "</strong><small>", escapeHtml(items), items > 1 ? " articles · " : " article · ",
+    escapeHtml(item.employee_name), "</small></div>",
     '<div class="event-time"><strong>', formatTime(item.generated_at),
     "</strong><small>créée</small></div>",
     "</article>"

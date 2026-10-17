@@ -1,87 +1,109 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="800" viewBox="0 0 1440 800" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1020" viewBox="0 0 1600 1020" font-family="Segoe UI, Helvetica, Arial, sans-serif">
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
 <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#93c5fd"/></marker>
-<style>.t{font-size:28px;font-weight:700;fill:#0f172a}.s{font-size:16px;fill:#475569}.h{font-size:16px;font-weight:700;fill:#0f172a}.hs{font-size:13px;fill:#64748b}.n{font-size:16px;font-weight:700;fill:#0f172a;font-family:Consolas,monospace}.ns{font-size:12.5px;fill:#475569}.l{font-size:13px;fill:#475569}</style></defs>
-<rect width="1440" height="800" fill="#ffffff"/>
-<text x="40" y="50" class="t">Lignage dbt · walmart_dbt</text>
-<text x="40" y="78" class="s">Sources Bronze → Silver technique → Silver business / éphémères → Gold (dimensions SCD2 et table de faits)</text>
-<text x="40" y="118" class="h">Bronze (sources)</text><text x="40" y="136" class="hs">walmart.bronze_local</text>
-<text x="380" y="118" class="h">Silver technique</text><text x="380" y="136" class="hs">walmart.silver_t</text>
-<text x="760" y="118" class="h">Silver business · éphémères</text><text x="760" y="136" class="hs">walmart.silver_b · non matérialisés</text>
-<text x="1140" y="118" class="h">Gold</text><text x="1140" y="136" class="hs">walmart.gold</text>
-<path d="M300,180.0 C340.0,180.0 340.0,180.0 376,180.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M300,270.0 C340.0,270.0 340.0,270.0 376,270.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M300,390.0 C340.0,390.0 340.0,390.0 376,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M300,480.0 C340.0,480.0 340.0,480.0 376,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M300,570.0 C340.0,570.0 340.0,570.0 376,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M300,660.0 C340.0,660.0 340.0,660.0 376,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M640,180.0 C700.0,180.0 700.0,195.0 756,195.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
-<path d="M640,270.0 C700.0,270.0 700.0,195.0 756,195.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
-<path d="M640,390.0 C700.0,390.0 700.0,195.0 756,195.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
-<path d="M640,480.0 C700.0,480.0 700.0,195.0 756,195.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
-<path d="M640,570.0 C700.0,570.0 700.0,195.0 756,195.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
-<path d="M640,660.0 C700.0,660.0 700.0,195.0 756,195.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
-<path d="M1020,195.0 C1080.0,195.0 1080.0,195.0 1136,195.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1020,280.0 C1080.0,280.0 1080.0,280.0 1136,280.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M640,390.0 C700.0,390.0 700.0,390.0 756,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1020,390.0 C1080.0,390.0 1080.0,390.0 1136,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M640,480.0 C700.0,480.0 700.0,480.0 756,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1020,480.0 C1080.0,480.0 1080.0,480.0 1136,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M640,570.0 C700.0,570.0 700.0,570.0 756,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1020,570.0 C1080.0,570.0 1080.0,570.0 1136,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M640,660.0 C700.0,660.0 700.0,660.0 756,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1020,660.0 C1080.0,660.0 1080.0,660.0 1136,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<line x1="890.0" y1="225" x2="890.0" y2="246" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
-<rect x="40" y="150" width="260" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
-<text x="56" y="176" class="n">orders</text><text x="56" y="196" class="ns">source · bronze_local</text>
-<rect x="380" y="150" width="260" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
-<text x="396" y="176" class="n">orders_t</text><text x="396" y="196" class="ns">incremental · merge</text>
-<rect x="40" y="240" width="260" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
-<text x="56" y="266" class="n">order_items</text><text x="56" y="286" class="ns">source · bronze_local</text>
-<rect x="380" y="240" width="260" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
-<text x="396" y="266" class="n">order_items_t</text><text x="396" y="286" class="ns">incremental · merge</text>
-<rect x="40" y="360" width="260" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
-<text x="56" y="386" class="n">customers</text><text x="56" y="406" class="ns">source · bronze_local</text>
-<rect x="380" y="360" width="260" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
-<text x="396" y="386" class="n">customers_t</text><text x="396" y="406" class="ns">incremental · merge</text>
-<rect x="40" y="450" width="260" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
-<text x="56" y="476" class="n">products</text><text x="56" y="496" class="ns">source · bronze_local</text>
-<rect x="380" y="450" width="260" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
-<text x="396" y="476" class="n">products_t</text><text x="396" y="496" class="ns">incremental · merge</text>
-<rect x="40" y="540" width="260" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
-<text x="56" y="566" class="n">stores</text><text x="56" y="586" class="ns">source · bronze_local</text>
-<rect x="380" y="540" width="260" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
-<text x="396" y="566" class="n">stores_t</text><text x="396" y="586" class="ns">incremental · merge</text>
-<rect x="40" y="630" width="260" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
-<text x="56" y="656" class="n">employees</text><text x="56" y="676" class="ns">source · bronze_local</text>
-<rect x="380" y="630" width="260" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
-<text x="396" y="656" class="n">employees_t</text><text x="396" y="676" class="ns">incremental · merge</text>
-<rect x="760" y="165" width="260" height="60" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-<text x="776" y="191" class="n">obt_b</text><text x="776" y="211" class="ns">table · 1 ligne / article</text>
-<rect x="760" y="250" width="260" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="776" y="276" class="n">eph_orders</text><text x="776" y="296" class="ns">ephemeral · 1er article</text>
-<rect x="760" y="360" width="260" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="776" y="386" class="n">eph_customers</text><text x="776" y="406" class="ns">ephemeral · depuis silver_t</text>
-<rect x="760" y="450" width="260" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="776" y="476" class="n">eph_products</text><text x="776" y="496" class="ns">ephemeral · depuis silver_t</text>
-<rect x="760" y="540" width="260" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="776" y="566" class="n">eph_stores</text><text x="776" y="586" class="ns">ephemeral · depuis silver_t</text>
-<rect x="760" y="630" width="260" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="776" y="656" class="n">eph_employees</text><text x="776" y="676" class="ns">ephemeral · depuis silver_t</text>
-<rect x="1140" y="165" width="260" height="60" rx="10" fill="#fde68a" stroke="#b45309" stroke-width="2"/>
-<text x="1156" y="191" class="n">fact_orders</text><text x="1156" y="211" class="ns">table · grain order_item_id</text>
-<rect x="1140" y="250" width="260" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-<text x="1156" y="276" class="n">dim_orders</text><text x="1156" y="296" class="ns">snapshot SCD2</text>
-<rect x="1140" y="360" width="260" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-<text x="1156" y="386" class="n">dim_customers</text><text x="1156" y="406" class="ns">snapshot SCD2</text>
-<rect x="1140" y="450" width="260" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-<text x="1156" y="476" class="n">dim_products</text><text x="1156" y="496" class="ns">snapshot SCD2</text>
-<rect x="1140" y="540" width="260" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-<text x="1156" y="566" class="n">dim_stores</text><text x="1156" y="586" class="ns">snapshot SCD2</text>
-<rect x="1140" y="630" width="260" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-<text x="1156" y="656" class="n">dim_employees</text><text x="1156" y="676" class="ns">snapshot SCD2</text>
-<line x1="40" y1="730" x2="90" y2="730" stroke="#334155" stroke-width="2" marker-end="url(#a)"/><text x="100" y="735" class="l">dépendance ref()/source()</text>
-<line x1="330" y1="730" x2="380" y2="730" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/><text x="390" y="735" class="l">jointure dans obt_b</text>
-<rect x="580" y="720" width="30" height="20" rx="4" fill="#fff" stroke="#d97706" stroke-dasharray="6 4"/><text x="620" y="735" class="l">éphémère (CTE compilée dans le snapshot)</text>
-<text x="40" y="770" class="l">Les dimensions client, produit, magasin et employé lisent Silver directement : les entités sans commande y figurent. dim_orders garde le premier article (order_item_id) pour le rapprochement avec fact_orders.</text>
+<style>.t{font-size:28px;font-weight:700;fill:#0f172a}.s{font-size:16px;fill:#475569}.h{font-size:16px;font-weight:700;fill:#0f172a}.hs{font-size:13px;fill:#64748b}.n{font-size:15px;font-weight:700;fill:#0f172a;font-family:Consolas,monospace}.ns{font-size:12.5px;fill:#475569}.l{font-size:13px;fill:#475569}</style></defs>
+<rect width="1600" height="1020" fill="#ffffff"/>
+<text x="30" y="50" class="t">Lignage dbt · walmart_dbt</text>
+<text x="30" y="78" class="s">Bronze → Silver technique → Silver business / éphémères → historique SCD2 → schéma en étoile Gold</text>
+<text x="30" y="118" class="h">Bronze (sources)</text><text x="30" y="136" class="hs">walmart.bronze_local</text>
+<text x="330" y="118" class="h">Silver technique</text><text x="330" y="136" class="hs">walmart.silver_t</text>
+<text x="630" y="118" class="h">Silver business · éphémères</text><text x="630" y="136" class="hs">walmart.silver_b · non matérialisés</text>
+<text x="930" y="118" class="h">Historique SCD2</text><text x="930" y="136" class="hs">walmart.snapshots</text>
+<text x="1260" y="118" class="h">Gold · schéma en étoile</text><text x="1260" y="136" class="hs">walmart.gold</text>
+<path d="M270,180.0 C300.0,180.0 300.0,180.0 326,180.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M270,270.0 C300.0,270.0 300.0,270.0 326,270.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M270,390.0 C300.0,390.0 300.0,390.0 326,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M270,480.0 C300.0,480.0 300.0,480.0 326,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M270,570.0 C300.0,570.0 300.0,570.0 326,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M270,660.0 C300.0,660.0 300.0,660.0 326,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M570,180.0 C600.0,180.0 600.0,180.0 626,180.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
+<path d="M570,270.0 C600.0,270.0 600.0,180.0 626,180.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
+<path d="M570,390.0 C600.0,390.0 600.0,180.0 626,180.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
+<path d="M570,480.0 C600.0,480.0 600.0,180.0 626,180.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
+<path d="M570,570.0 C600.0,570.0 600.0,180.0 626,180.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
+<path d="M570,660.0 C600.0,660.0 600.0,180.0 626,180.0" fill="none" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/>
+<path d="M870,180.0 C1065.0,180.0 1065.0,180.0 1256,180.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M570,180.0 C600.0,180.0 600.0,270.0 626,270.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M870,270.0 C900.0,270.0 900.0,270.0 926,270.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M570,390.0 C600.0,390.0 600.0,390.0 626,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M870,390.0 C900.0,390.0 900.0,390.0 926,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1170,390.0 C1215.0,390.0 1215.0,390.0 1256,390.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M570,480.0 C600.0,480.0 600.0,480.0 626,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M870,480.0 C900.0,480.0 900.0,480.0 926,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1170,480.0 C1215.0,480.0 1215.0,480.0 1256,480.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M570,570.0 C600.0,570.0 600.0,570.0 626,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M870,570.0 C900.0,570.0 900.0,570.0 926,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1170,570.0 C1215.0,570.0 1215.0,570.0 1256,570.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M570,660.0 C600.0,660.0 600.0,660.0 626,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M870,660.0 C900.0,660.0 900.0,660.0 926,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1170,660.0 C1215.0,660.0 1215.0,660.0 1256,660.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1500,770.0 C1560,770.0 1560,180.0 1504,180.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#a)" transform="scale(1)"/>
+<rect x="30" y="150" width="240" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+<text x="44" y="176" class="n">orders</text><text x="44" y="196" class="ns">source · bronze_local</text>
+<rect x="330" y="150" width="240" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+<text x="344" y="176" class="n">orders_t</text><text x="344" y="196" class="ns">incremental · merge</text>
+<rect x="30" y="240" width="240" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+<text x="44" y="266" class="n">order_items</text><text x="44" y="286" class="ns">source · bronze_local</text>
+<rect x="330" y="240" width="240" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+<text x="344" y="266" class="n">order_items_t</text><text x="344" y="286" class="ns">incremental · merge</text>
+<rect x="30" y="360" width="240" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+<text x="44" y="386" class="n">customers</text><text x="44" y="406" class="ns">source · bronze_local</text>
+<rect x="330" y="360" width="240" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+<text x="344" y="386" class="n">customers_t</text><text x="344" y="406" class="ns">incremental · merge</text>
+<rect x="30" y="450" width="240" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+<text x="44" y="476" class="n">products</text><text x="44" y="496" class="ns">source · bronze_local</text>
+<rect x="330" y="450" width="240" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+<text x="344" y="476" class="n">products_t</text><text x="344" y="496" class="ns">incremental · merge</text>
+<rect x="30" y="540" width="240" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+<text x="44" y="566" class="n">stores</text><text x="44" y="586" class="ns">source · bronze_local</text>
+<rect x="330" y="540" width="240" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+<text x="344" y="566" class="n">stores_t</text><text x="344" y="586" class="ns">incremental · merge</text>
+<rect x="30" y="630" width="240" height="60" rx="10" fill="#fde7c7" stroke="#b45309" stroke-width="2"/>
+<text x="44" y="656" class="n">employees</text><text x="44" y="676" class="ns">source · bronze_local</text>
+<rect x="330" y="630" width="240" height="60" rx="10" fill="#e5e7eb" stroke="#64748b" stroke-width="2"/>
+<text x="344" y="656" class="n">employees_t</text><text x="344" y="676" class="ns">incremental · merge</text>
+<rect x="630" y="150" width="240" height="60" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="644" y="176" class="n">obt_b</text><text x="644" y="196" class="ns">table · 1 ligne / article</text>
+<rect x="630" y="240" width="240" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="644" y="266" class="n">eph_orders</text><text x="644" y="286" class="ns">ephemeral</text>
+<rect x="930" y="240" width="240" height="60" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+<text x="944" y="266" class="n">orders_snapshot</text><text x="944" y="286" class="ns">historique des statuts</text>
+<rect x="630" y="360" width="240" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="644" y="386" class="n">eph_customers</text><text x="644" y="406" class="ns">ephemeral</text>
+<rect x="930" y="360" width="240" height="60" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+<text x="944" y="386" class="n">customers_snapshot</text><text x="944" y="406" class="ns">SCD2 · walmart.snapshots</text>
+<rect x="1260" y="360" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="386" class="n">dim_customer</text><text x="1274" y="406" class="ns">version courante · clé unique</text>
+<rect x="630" y="450" width="240" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="644" y="476" class="n">eph_products</text><text x="644" y="496" class="ns">ephemeral</text>
+<rect x="930" y="450" width="240" height="60" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+<text x="944" y="476" class="n">products_snapshot</text><text x="944" y="496" class="ns">SCD2 · walmart.snapshots</text>
+<rect x="1260" y="450" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="476" class="n">dim_product</text><text x="1274" y="496" class="ns">version courante · clé unique</text>
+<rect x="630" y="540" width="240" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="644" y="566" class="n">eph_stores</text><text x="644" y="586" class="ns">ephemeral</text>
+<rect x="930" y="540" width="240" height="60" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+<text x="944" y="566" class="n">stores_snapshot</text><text x="944" y="586" class="ns">SCD2 · walmart.snapshots</text>
+<rect x="1260" y="540" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="566" class="n">dim_store</text><text x="1274" y="586" class="ns">version courante · clé unique</text>
+<rect x="630" y="630" width="240" height="60" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="644" y="656" class="n">eph_employees</text><text x="644" y="676" class="ns">ephemeral</text>
+<rect x="930" y="630" width="240" height="60" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+<text x="944" y="656" class="n">employees_snapshot</text><text x="944" y="676" class="ns">SCD2 · walmart.snapshots</text>
+<rect x="1260" y="630" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="656" class="n">dim_employee</text><text x="1274" y="676" class="ns">version courante · clé unique</text>
+<rect x="1260" y="150" width="240" height="60" rx="10" fill="#fde68a" stroke="#b45309" stroke-width="2"/>
+<text x="1274" y="176" class="n">fact_orders</text><text x="1274" y="196" class="ns">fait · grain order_item_id</text>
+<rect x="1260" y="740" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="766" class="n">dim_order_profile</text><text x="1274" y="786" class="ns">canal × paiement × statut</text>
+<rect x="1260" y="830" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="856" class="n">dim_date</text><text x="1274" y="876" class="ns">calendrier généré</text>
+<rect x="1260" y="920" width="240" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="1274" y="946" class="n">dim_time</text><text x="1274" y="966" class="ns">heures 0–23 générées</text>
+<line x1="30" y1="760" x2="80" y2="760" stroke="#334155" stroke-width="2" marker-end="url(#a)"/><text x="90" y="765" class="l">dépendance ref() / source()</text>
+<line x1="30" y1="794" x2="80" y2="794" stroke="#93c5fd" stroke-width="1.6" marker-end="url(#f)"/><text x="90" y="799" class="l">jointure dans obt_b</text>
+<rect x="30" y="818" width="50" height="22" rx="4" fill="#fff" stroke="#d97706" stroke-dasharray="6 4"/><text x="90" y="834" class="l">éphémère (CTE compilée dans le snapshot)</text>
+<rect x="30" y="852" width="50" height="22" rx="4" fill="#f3e8ff" stroke="#7c3aed"/><text x="90" y="868" class="l">snapshot SCD2 (historique d'audit, hors étoile)</text>
+<text x="30" y="910" class="l">Les dimensions lisent la version courante des snapshots : une ligne par clé, donc des relations 1 → * sans filtre côté Power BI.</text>
+<text x="30" y="932" class="l">dim_order_profile fournit order_profile_key au fait ; dim_date et dim_time sont générées par dbt.</text>
 </svg>

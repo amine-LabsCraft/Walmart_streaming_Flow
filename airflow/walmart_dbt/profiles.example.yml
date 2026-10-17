@@ -9,3 +9,11 @@ walmart_dbt:
       catalog: "{{ env_var('DBT_CATALOG', 'walmart') }}"
       schema: "{{ env_var('DBT_SCHEMA', 'dbt_schema') }}"
       threads: "{{ env_var('DBT_THREADS', '1') | as_number }}"
+      # Fail fast on a stalled network call (default: 600 s and 30 attempts);
+      # Airflow then retries the task.
+      connect_retries: 3
+      connect_timeout: 10
+      connection_parameters:
+        _socket_timeout: 120
+        _retry_stop_after_attempts_count: 5
+        _retry_stop_after_attempts_duration: 300

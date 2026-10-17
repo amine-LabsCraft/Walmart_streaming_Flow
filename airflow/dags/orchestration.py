@@ -1,11 +1,25 @@
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from airflow.sdk.exceptions import AirflowFailException
 from airflow.sdk import dag, task
 from airflow.providers.standard.operators.bash import BashOperator
 
-from walmart_ingestion import sync_source_to_bronze
+from walmart_ingestion import SourceResetError, sync_source_to_bronze
+
+
+# Resilience for a pipeline that talks to a remote SQL warehouse:
+# - a task that loses its network connection or its worker is retried
+#   automatically instead of failing the whole run;
+# - every task has a time limit, so a stalled call ends instead of hanging
+#   (normal durations: 30 s to 5 min).
+DEFAULT_ARGS = {
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+    "retry_exponential_backoff": True,
+    "execution_timeout": timedelta(minutes=20),
+}
 
 
 @dag(
@@ -13,6 +27,12 @@ from walmart_ingestion import sync_source_to_bronze
     schedule="@hourly",
     start_date=datetime(2026, 8, 17),
     catchup=False,
+    # One run at a time: a manual trigger waits for the scheduled run
+    # instead of writing the same tables and dbt target folder in parallel.
+    max_active_runs=1,
+    # A run that cannot finish within the hour is stopped before the next one.
+    dagrun_timeout=timedelta(minutes=55),
+    default_args=DEFAULT_ARGS,
     tags=["walmart", "dbt", "databricks"],
 )
 def orchestrate():
@@ -25,14 +45,18 @@ def orchestrate():
         """
 
         # Credentials come from .env and must NOT be committed to Git.
-        synced = sync_source_to_bronze(
-            source_url=os.environ["WALMART_SOURCE_DB_URL"],
-            server_hostname=os.environ["DATABRICKS_HOST"],
-            http_path=os.environ["DATABRICKS_HTTP_PATH"],
-            access_token=os.environ["DATABRICKS_TOKEN"],
-            catalog=os.environ.get("DBT_CATALOG", "walmart"),
-            schema=os.environ.get("WALMART_BRONZE_SCHEMA", "bronze_local"),
-        )
+        try:
+            synced = sync_source_to_bronze(
+                source_url=os.environ["WALMART_SOURCE_DB_URL"],
+                server_hostname=os.environ["DATABRICKS_HOST"],
+                http_path=os.environ["DATABRICKS_HTTP_PATH"],
+                access_token=os.environ["DATABRICKS_TOKEN"],
+                catalog=os.environ.get("DBT_CATALOG", "walmart"),
+                schema=os.environ.get("WALMART_BRONZE_SCHEMA", "bronze_local"),
+            )
+        except SourceResetError as error:
+            # Retrying cannot fix a reset source: fail at once, untouched bronze.
+            raise AirflowFailException(str(error)) from error
 
         return synced
 
@@ -92,14 +116,16 @@ def orchestrate():
 
     # ============================================================
     # GOLD - DIMENSIONS
-    # Snapshots compile the ephemeral models (models/gold/ephemeral)
-    # inline, so they need no separate dbt run.
+    # 1. dbt snapshot records the SCD2 history (walmart.snapshots),
+    #    compiling the ephemeral models inline.
+    # 2. The star-schema dimensions read the current version of
+    #    each snapshot, plus the date, time and order-profile dims.
     # ============================================================
 
     gold_dimensions = BashOperator(
         task_id="gold_dimensions",
         cwd="/opt/airflow/walmart_dbt",
-        bash_command="dbt snapshot",
+        bash_command="dbt snapshot && dbt run --select path:models/gold/dim",
     )
 
     # ============================================================
@@ -115,7 +141,7 @@ def orchestrate():
     gold_facts_tests = BashOperator(
         task_id="gold_facts_tests",
         cwd="/opt/airflow/walmart_dbt",
-        bash_command="dbt test --select path:models/gold/fact",
+        bash_command="dbt test --select path:models/gold",
     )
 
     # ============================================================

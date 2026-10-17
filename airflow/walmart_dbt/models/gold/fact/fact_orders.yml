@@ -3,42 +3,80 @@ version: 2
 models:
   - name: fact_orders
     description: >-
-      Table de faits au grain d'une ligne de commande. Utiliser sales_amount
-      pour les mesures additives Power BI; order_total_amount est repete sur
-      chaque ligne et ne doit pas etre additionne.
-    data_tests:
-      - dim_orders_order_item_match
+      Table de faits du schéma en étoile, au grain d'une ligne de commande.
+      Une commande passée compte une seule fois (DISTINCTCOUNT order_id) ;
+      le revenu net additionne net_sales_amount (commandes payées seulement).
+      Chaque clé étrangère pointe vers une dimension à clé unique.
     columns:
       - name: order_item_id
-        data_tests:
-          - not_null
-          - unique
+        description: Grain de la table (identifiant de ligne).
+        data_tests: [not_null, unique]
       - name: order_id
+        description: Dimension dégénérée (numéro de commande).
+        data_tests: [not_null]
+      - name: date_key
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: time_key
+        description: Heure locale du magasin (0-23).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_time')
+                field: time_key
       - name: customer_id
         data_tests:
           - not_null
-      - name: store_id
-        data_tests:
-          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_id
       - name: product_id
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_id
+      - name: store_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_store')
+                field: store_id
       - name: employee_id
-        description: >-
-          Employe ayant traite la commande. NULL pour les commandes historiques
-          creees avant l'ajout de cette relation dans la source.
+        description: Caissier (magasin) ou préparateur (en ligne) du magasin de la commande.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_employee')
+                field: employee_id
+      - name: order_profile_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_order_profile')
+                field: order_profile_key
+      - name: order_timestamp
+        description: Horodatage local du magasin, conservé pour le détail.
       - name: sales_amount
+        description: Montant brut de la ligne (quantity × unit_price), tout statut.
         data_tests:
           - not_null
           - greater_than:
               arguments:
                 value: 0
-      - name: order_date
-        data_tests:
-          - not_null
-      - name: date_key
-        data_tests:
-          - not_null
-      - name: processed_at
+      - name: net_sales_amount
+        description: Montant de la ligne si la commande est payée, sinon 0.
+        data_tests: [not_null]
+      - name: returned_amount
+        description: Montant de la ligne si la commande a été retournée, sinon 0.
+        data_tests: [not_null]

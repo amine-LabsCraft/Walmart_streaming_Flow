@@ -72,8 +72,8 @@
     <rect x="660" y="310" width="270" height="110" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
     <circle cx="688" cy="338" r="14" fill="#d97706"/><text x="688" y="343" text-anchor="middle" class="step">8</text>
     <text x="712" y="344" class="task">gold_dimensions</text>
-    <text x="678" y="374" class="cmd">dbt snapshot</text>
-    <text x="678" y="396" class="note">5 dimensions SCD2</text>
+    <text x="678" y="374" class="cmd">dbt snapshot + dbt run</text>
+    <text x="678" y="396" class="note">historique SCD2 + 7 dimensions</text>
 
     <rect x="970" y="310" width="270" height="110" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
     <circle cx="998" cy="338" r="14" fill="#d97706"/><text x="998" y="343" text-anchor="middle" class="step">9</text>
@@ -85,7 +85,7 @@
     <circle cx="1308" cy="338" r="15" fill="#059669"/><text x="1308" y="343" text-anchor="middle" class="step">10</text>
     <text x="1332" y="344" class="task">gold_facts_tests</text>
     <text x="1298" y="374" class="cmd">dbt test --select</text>
-    <text x="1298" y="394" class="cmd">path:models/gold/fact</text>
+    <text x="1298" y="394" class="cmd">path:models/gold</text>
   </g>
   <line x1="310" y1="365" x2="346" y2="365" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
   <line x1="620" y1="365" x2="656" y2="365" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
@@ -99,6 +99,6 @@
     <rect x="380" y="455" width="18" height="18" rx="4" fill="#ecfdf5" stroke="#059669"/><text x="406" y="469" class="note">tests dbt (bloquants)</text>
     <rect x="570" y="455" width="18" height="18" rx="4" fill="#fef3c7" stroke="#d97706"/><text x="596" y="469" class="note">couche Gold</text>
     <rect x="720" y="455" width="18" height="18" rx="4" fill="#f1f5f9" stroke="#64748b"/><text x="746" y="469" class="note">maintenance</text>
-    <text x="900" y="469" class="note">Les modèles éphémères gold/ephemeral sont compilés dans les snapshots (étape 8).</text>
+    <text x="900" y="469" class="note">Étape 8 : snapshots SCD2 (walmart.snapshots) puis dimensions du schéma en étoile.</text>
   </g>
 </svg>

@@ -36,15 +36,13 @@ erDiagram
 
 ### Générateur Order Pulse
 
-`generator_web_app.py` sert une interface sur `http://127.0.0.1:5050` (ou le port libre suivant). Chaque commande est écrite dans **une seule transaction**, et respecte ces règles :
+`generator_web_app.py` sert une interface sur `http://127.0.0.1:5050` (ou le port libre suivant). Chaque tick écrit **une seule commande**, dans une seule transaction, selon les règles d'un Walmart Supercentre :
+- vente en magasin pendant les heures d'ouverture locales (caissier), ou commande web (préparateur) ;
+- client qui habite près du magasin, avec une fidélité à longue traîne ;
+- panier dominé par l'épicerie, quantités selon la catégorie, prix du catalogue ;
+- cycle de vie Pending → Completed / Cancelled → Returned, appliqué par mise à jour.
 
-```text
-client actif existant
-magasin actif + employé actif rattaché à ce magasin
-1 à 5 produits actifs, prix > 0
-line_amount = quantity × unit_price
-orders.total_amount = Σ line_amount
-```
+Le détail est dans [BUSINESS_RULES.md](BUSINESS_RULES.md). `order_timestamp` est en heure locale du magasin ; `created_timestamp` et `updated_timestamp` sont en UTC technique.
 
 Un verrou consultatif (`pg_advisory_xact_lock`) sérialise l'attribution des identifiants quand plusieurs générateurs tournent en parallèle. Le bouton **Sign up** crée un nouveau client actif, éligible aux commandes suivantes.
 
@@ -60,11 +58,13 @@ Databricks ne peut pas joindre une base qui tourne sur le poste local. C'est don
 
 | Table | Clé | Watermark lu dans la table bronze |
 |---|---|---|
-| `orders`, `order_items` | `order_id`, `order_item_id` | `change_version > max(change_version)` |
-| `customers`, `products`, `stores`, `employees` | identifiant | `updated_timestamp >= max(updated_timestamp)` |
+| `orders`, `order_items` | `order_id`, `order_item_id` | `change_version > max(change_version) - 1000` |
+| `customers`, `products`, `stores`, `employees` | identifiant | `updated_timestamp >= max(updated_timestamp) - 10 min` |
 
 - Au premier run, le schéma `walmart.bronze_local` et ses tables sont créés et remplis par `INSERT`.
 - Les runs suivants font un `MERGE` sur la clé primaire. Un run relancé est idempotent.
+- **Fenêtre de recouvrement** : une transaction reçoit son `change_version` (ou son `updated_timestamp`) avant son `COMMIT`. Elle peut donc devenir visible *après* une transaction plus récente. Sans marge, une ingestion lancée entre les deux avancerait le watermark au-delà de cette ligne, qui serait perdue pour toujours. Chaque run relit donc les 1 000 dernières versions et les 10 dernières minutes ; le `MERGE` rend ces relectures sans effet. Les modèles `silver_t` appliquent la même marge (variables dbt `cdc_overlap_versions` et `cdc_overlap_minutes`).
+- **Garde « source réinitialisée »** : si le `change_version` maximal de la source est inférieur au watermark du bronze, la base source a été recréée. La tâche échoue alors immédiatement, sans nouvelle tentative et sans rien écrire, avec un message qui renvoie vers la procédure de restauration. Sans cette garde, les nouvelles commandes seraient ignorées et les `order_id` réutilisés écraseraient l'historique.
 - Les écritures passent par le SQL Warehouse (`DATABRICKS_HTTP_PATH`).
 
 > Si le volume `walmart-source-db` est recréé, il faut réaligner la source sur le bronze **avant** de générer de nouvelles commandes ; voir [RUNBOOK.md](RUNBOOK.md#réinitialiser-la-base-source).
@@ -80,7 +80,8 @@ Le projet dbt `airflow/walmart_dbt` construit les couches Silver et Gold. Le dé
 | Bronze | `bronze_local` | 6 tables | Tables Delta alimentées par `ingest_cdc` |
 | Silver technique | `silver_t` | `*_t` | Incrémental `merge` |
 | Silver business | `silver_b` | `obt_b` | Table |
-| Gold | `gold` | 5 `dim_*` + `fact_orders` | Snapshots SCD2 + table |
+| Historique | `snapshots` | 5 `*_snapshot` | Snapshots SCD2 (audit) |
+| Gold | `gold` | Schéma en étoile : `fact_orders` + 7 dimensions | Tables |
 
 ---
 
@@ -89,6 +90,15 @@ Le projet dbt `airflow/walmart_dbt` construit les couches Silver et Gold. Le dé
 ![DAG Airflow orchestrate](images/airflow_dag.png)
 
 Le DAG `orchestrate` (`airflow/dags/orchestration.py`) tourne toutes les heures. Il exécute dix tâches en série et s'arrête à la première erreur : un test dbt en échec bloque la publication Gold.
+
+Résilience :
+- **un seul run à la fois** (`max_active_runs=1`) ;
+- **2 nouvelles tentatives** automatiques par tâche ;
+- **délai maximal de 20 min par tâche** et de 55 min par run ;
+- **délais réseau courts** vers Databricks (120 s) ;
+- **arrêt progressif du worker**, qui termine sa tâche avant de s'arrêter.
+
+Le détail est dans [RUNBOOK.md](RUNBOOK.md#protections-automatiques-du-pipeline).
 
 Services Docker d'Airflow : `airflow-apiserver` (:8080), `airflow-scheduler`, `airflow-dag-processor`, `airflow-worker`, `postgres` (métadonnées), `redis` (broker Celery) et `walmart-source-db`.
 

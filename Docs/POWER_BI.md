@@ -18,183 +18,84 @@ Le rapport doit répondre à cinq niveaux de questions :
 
 La table centrale est `fact_orders`, au grain d’**une ligne de commande** (`order_item_id`).
 
-> Utiliser `sales_amount` pour calculer le revenu. Ne jamais additionner `order_total_amount`, car le total de commande est répété sur chaque ligne de la commande.
+> Le revenu est `[Revenue]` = `SUM(fact_orders[net_sales_amount])` (commandes payées). Le total d'une commande se retrouve en additionnant `sales_amount` sur ses lignes.
 
 ---
 
-## 2. Modèle sémantique Power BI après correction
+## 2. Modèle sémantique : schéma en étoile
+
+![Modèle en étoile Gold](images/star_schema.png)
 
 ### Grain analytique
 
-`walmart.gold.fact_orders` est la table centrale :
+`walmart.gold.fact_orders` est la seule table de faits :
 
 ```text
 1 ligne = 1 article de commande = 1 order_item_id
 ```
 
-Une commande peut apparaître sur plusieurs lignes. Utiliser `sales_amount` pour le revenu, `DISTINCTCOUNT(order_id)` pour les commandes et `SUM(quantity)` pour les quantités. Ne jamais additionner `order_total_amount`, répété sur chaque article.
+Le fait ne contient que des clés vers les dimensions, le numéro de commande (`order_id`, dimension dégénérée) et des mesures additives : `quantity`, `unit_price`, `sales_amount`, `net_sales_amount`, `returned_amount`. Les attributs descriptifs (canal, paiement, statut, calendrier, heure) sont dans les dimensions.
 
 ### Tables à charger
 
-| Rôle | Table | Clé | Usage |
+| Rôle | Table | Clé (unique) | Contenu |
 |---|---|---|---|
-| Fact | `walmart.gold.fact_orders` | `order_item_id` | Ventes au grain article |
-| Dimension | `walmart.gold.dim_orders` | `order_id` | Commandes |
-| Dimension | `walmart.gold.dim_customers` | `customer_id` | Clients |
-| Dimension | `walmart.gold.dim_products` | `product_id` | Produits |
-| Dimension | `walmart.gold.dim_stores` | `store_id` | Magasins |
-| Dimension | `walmart.gold.dim_employees` | `employee_id` | Employés |
+| Fait | `walmart.gold.fact_orders` | `order_item_id` | Lignes de commande et mesures |
+| Dimension | `walmart.gold.dim_date` | `date_key` | Calendrier, libellés français, fériés, Black Friday, Noël |
+| Dimension | `walmart.gold.dim_time` | `time_key` | Heure locale (0–23), tranche de la journée |
+| Dimension | `walmart.gold.dim_order_profile` | `order_profile_key` | Canal, moyen de paiement, statut, `is_net_sale` |
+| Dimension | `walmart.gold.dim_customer` | `customer_id` | Clients (version courante) |
+| Dimension | `walmart.gold.dim_product` | `product_id` | Produits, catégorie, marque, prix courant |
+| Dimension | `walmart.gold.dim_store` | `store_id` | Supercentres, ville, province, fuseau horaire |
+| Dimension | `walmart.gold.dim_employee` | `employee_id` | Employés, poste, groupe de rôles |
 
-Ne pas charger Bronze, Silver, `obt_b` ni les tables de restauration telles que :
+Chaque dimension a **une ligne par clé** : aucun filtre « version courante » n'est nécessaire dans Power Query. L'historique SCD2 est dans le schéma `walmart.snapshots` (`*_snapshot`) : ne pas le charger dans le modèle du rapport.
 
-- `dim_orders_backup_pre_grain_fix_20260730` ;
-- `dim_employees_backup_pre_null_cleanup_20260801` ;
-- toute table contenant `backup`, `temp` ou `test`.
-
-### Schéma en étoile validé
-
-![Modèle en étoile Gold](images/star_schema.png)
-
-```mermaid
-flowchart TB
-    DO["dim_orders<br/>order_id unique"]
-    DC["dim_customers<br/>customer_id unique"]
-    DP["dim_products<br/>product_id unique"]
-    DS["dim_stores<br/>store_id unique"]
-    DE["dim_employees<br/>employee_id unique"]
-    F[("fact_orders<br/>1 ligne / order_item_id")]
-
-    DO -->|"1 : * · order_id"| F
-    DC -->|"1 : * · customer_id"| F
-    DP -->|"1 : * · product_id"| F
-    DS -->|"1 : * · store_id"| F
-    DE -->|"1 : * · employee_id"| F
-```
+Dans le navigateur Databricks, cocher les 8 tables du schéma `gold`, toutes listées ci-dessus. Ne pas charger Bronze, Silver, `obt_b` ni le schéma `snapshots`.
 
 ### Relations Power BI
 
-| Dimension côté `1` | Clé dimension | Fact côté `*` | Clé fact | Filtrage |
-|---|---|---|---|---|
-| `dim_orders` | `order_id` | `fact_orders` | `order_id` | Sens unique |
-| `dim_customers` | `customer_id` | `fact_orders` | `customer_id` | Sens unique |
-| `dim_products` | `product_id` | `fact_orders` | `product_id` | Sens unique |
-| `dim_stores` | `store_id` | `fact_orders` | `store_id` | Sens unique |
-| `dim_employees` | `employee_id` | `fact_orders` | `employee_id` | Sens unique |
+| Dimension côté `1` | Clé | Fait côté `*` | Clé |
+|---|---|---|---|
+| `dim_date` | `date_key` | `fact_orders` | `date_key` |
+| `dim_time` | `time_key` | `fact_orders` | `time_key` |
+| `dim_order_profile` | `order_profile_key` | `fact_orders` | `order_profile_key` |
+| `dim_customer` | `customer_id` | `fact_orders` | `customer_id` |
+| `dim_product` | `product_id` | `fact_orders` | `product_id` |
+| `dim_store` | `store_id` | `fact_orders` | `store_id` |
+| `dim_employee` | `employee_id` | `fact_orders` | `employee_id` |
 
 Règles :
 
-- créer cinq relations actives `1:*`, toujours de la dimension vers le fact ;
-- ne pas utiliser le double sens ;
-- ne pas créer de relation active `dim_stores → dim_employees`, car les deux dimensions filtrent déjà `fact_orders` ;
-- ne pas choisir `*:*` pour contourner une erreur de clé.
+- sept relations actives `1:*`, en sens unique, de la dimension vers le fait ;
+- pas de relation entre dimensions (`dim_employee[employee_store_id]` est un attribut descriptif) ;
+- jamais de `*:*` ni de double sens ;
+- marquer `dim_date` comme **table de dates** (colonne `date`) ;
+- trier `month_name` par `month_number`, `day_name` par `day_of_week` et `hour_label` par `time_key`.
 
-### Dimensions SCD2 : modèle courant recommandé
+Ces contrats sont testés par dbt à chaque run : clé unique et non nulle pour chaque dimension, `relationships` pour chaque clé étrangère du fait.
 
-Les dimensions sont des snapshots dbt SCD2 avec `dbt_scd_id`, `dbt_valid_from` et `dbt_valid_to`. Le fact contient les clés métier, mais pas les clés de version `dbt_scd_id`. Dans Power BI, utiliser donc une projection **courante** de chaque dimension.
+### Actualisation fiable
 
-Dans Power Query, filtrer `dim_orders`, `dim_customers`, `dim_products`, `dim_stores` et `dim_employees` :
+| Règle | Pourquoi |
+|---|---|
+| Désactiver **Fichier → Options → Fichier actif → Chargement des données → Date/heure automatique** | Avec `dim_date`, ces tables cachées (`LocalDateTable_…`, `DateTableTemplate_…`) sont inutiles. Power BI en crée une par colonne de date, et leurs dépendances peuvent provoquer l'erreur **« A cyclic reference was encountered during evaluation »** quand on actualise juste après avoir modifié le modèle |
+| Marquer `dim_date` comme table de dates | Active l'intelligence temporelle sur le vrai calendrier |
+| Actualiser **après** le succès du run du DAG (environ 15 min après l'heure pleine, ou à la fin d'un run manuel) | Pendant la phase Gold, les dimensions puis le fait sont remplacés l'un après l'autre |
+| Ne pas modifier le modèle (relations, types) pendant une actualisation | Une actualisation lancée sur un modèle en cours de modification peut échouer de façon transitoire |
+| Si l'erreur « cyclic reference » apparaît | Fermer la fenêtre, **Fermer et appliquer** dans Power Query, puis relancer l'actualisation. Si elle persiste, vérifier qu'aucune requête ne se référence elle-même (Affichage → Dépendances de requête) |
 
-```powerquery-m
-Table.SelectRows(
-    #"Étape précédente",
-    each Date.From([dbt_valid_to]) = #date(9999, 12, 31)
-)
-```
+### Dates et heures
 
-Après ce filtre :
+| Besoin | Champ |
+|---|---|
+| Tendance journalière | `dim_date[date]` |
+| Mois | `dim_date[year_month]` ou `dim_date[month_name]` |
+| Jour de semaine | `dim_date[day_name]`, `dim_date[is_weekend]` |
+| Événements commerciaux | `dim_date[retail_event]`, `dim_date[holiday_name]` |
+| Heure d'affluence | `dim_time[hour_label]`, `dim_time[day_part]` |
 
-- la clé métier doit être unique ;
-- la clé ne doit contenir ni `null`, ni vide, ni erreur ;
-- toutes les clés liées doivent avoir le même type, recommandé **Nombre entier**.
-
-Ne pas supprimer aveuglément les doublons dans Power Query. Un doublon restant après le filtre courant signale un problème à corriger dans le modèle ou les données.
-
-> Une analyse SCD2 historique « as-of » nécessiterait une clé de version dans `fact_orders`. Le modèle Power BI actuel analyse les faits historiques avec les attributs courants des dimensions.
-
-### Contrat Employés corrigé
-
-Le modèle garantit désormais :
-
-```text
-fact_orders.employee_id      : non NULL
-dim_employees.employee_id    : non NULL et unique après filtre current
-clé du fact                  : présente dans dim_employees
-store de la commande         : identique au store de l’employé
-nouvelle commande générée    : employé actif du même magasin
-```
-
-Le backfill n’a modifié que `employee_id` sur les anciennes commandes. Les dates, clients, magasins, produits, quantités et montants ont été conservés.
-
-Attention à l’interprétation :
-
-- la **complétude technique** Employés est de 100 % ;
-- les anciennes affectations Employé ont été reconstruites dans le même magasin pour ce dataset de démonstration ;
-- elles permettent de tester le schéma, les relations et les visuels ;
-- elles ne représentent pas une preuve RH ou transactionnelle historiquement observée.
-
-### Vérification avant les relations
-
-Activer le profilage Power Query sur **l’ensemble du jeu de données** et obtenir :
-
-| Contrôle | Attendu |
-|---|---:|
-| `dim_employees[employee_id]` vide | 0 |
-| Doublon `employee_id` après filtre current | 0 |
-| `fact_orders[employee_id]` vide | 0 |
-| Doublon `dim_orders[order_id]` après filtre current | 0 |
-| Erreur de conversion sur une clé | 0 |
-
-### Erreur Power BI « valeur en double Null »
-
-Si Databricks est propre mais que Power BI affiche encore cette erreur :
-
-1. fermer la fenêtre de relation ;
-2. ouvrir **Transformer les données** ;
-3. actualiser l’aperçu de `dim_employees` et `fact_orders` ;
-4. appliquer le filtre `dbt_valid_to = 31/12/9999` ;
-5. vérifier les erreurs de conversion de `employee_id` ;
-6. **Fermer et appliquer** ;
-7. exécuter **Accueil → Actualiser** ;
-8. si nécessaire, vider le cache depuis **Options → Chargement des données** ;
-9. créer `dim_employees[employee_id] 1 → * fact_orders[employee_id]` en sens unique.
-
-Ne pas passer en plusieurs-à-plusieurs pour masquer l’erreur.
-
-### Dates
-
-Utiliser directement :
-
-- `fact_orders[order_date]` pour les tendances journalières et mensuelles ;
-- `fact_orders[order_timestamp]` pour les heures ;
-- `fact_orders[date_key]` comme identifiant technique.
-
-Créer dans `fact_orders` :
-
-```DAX
-Order Year = YEAR ( fact_orders[order_date] )
-```
-
-```DAX
-Order Month Number = MONTH ( fact_orders[order_date] )
-```
-
-```DAX
-Order Month = FORMAT ( fact_orders[order_date], "MMMM" )
-```
-
-```DAX
-Order Year Month = FORMAT ( fact_orders[order_date], "YYYY-MM" )
-```
-
-```DAX
-Order Day Name = FORMAT ( fact_orders[order_date], "dddd" )
-```
-
-```DAX
-Order Hour = HOUR ( fact_orders[order_timestamp] )
-```
-
-Trier `Order Month` par `Order Month Number`.
+Les heures sont en **heure locale du magasin**.
 
 ---
 
@@ -204,29 +105,72 @@ Créer une table vide appelée `_Measures` et y ranger toutes les mesures.
 
 ### Mesures commerciales
 
+Règle de comptage : **une commande passée compte une seule fois**, dès sa création, quel que soit son statut ensuite. Les changements de statut (préparation web terminée, annulation, retour) modifient le profil et les montants de la commande, jamais le nombre de commandes. Une commande générée par Order Pulse fait donc toujours augmenter `Orders` de 1 après le run du DAG.
+
+```DAX
+Orders =
+DISTINCTCOUNT ( fact_orders[order_id] )
+```
+
+```DAX
+Completed Orders =
+CALCULATE ( [Orders], dim_order_profile[order_status] = "Completed" )
+```
+
+```DAX
+Pending Online Orders =
+CALCULATE ( [Orders], dim_order_profile[order_status] = "Pending" )
+```
+
+```DAX
+Cancelled Orders =
+CALCULATE ( [Orders], dim_order_profile[order_status] = "Cancelled" )
+```
+
+```DAX
+Returned Orders =
+CALCULATE ( [Orders], dim_order_profile[order_status] = "Returned" )
+```
+
 ```DAX
 Revenue =
+SUM ( fact_orders[net_sales_amount] )
+```
+
+```DAX
+Gross Sales =
 CALCULATE (
     SUM ( fact_orders[sales_amount] ),
-    fact_orders[order_is_active] = "Y",
-    fact_orders[order_item_is_active] = "Y"
+    dim_order_profile[order_status] IN { "Completed", "Returned" }
 )
 ```
 
 ```DAX
-Orders =
-CALCULATE (
-    DISTINCTCOUNT ( fact_orders[order_id] ),
-    fact_orders[order_is_active] = "Y"
+Returns Amount =
+SUM ( fact_orders[returned_amount] )
+```
+
+```DAX
+Return Rate =
+DIVIDE ( [Returned Orders], [Completed Orders] + [Returned Orders] )
+```
+
+```DAX
+Cancellation Rate =
+DIVIDE (
+    [Cancelled Orders],
+    CALCULATE ( [Orders], dim_order_profile[order_channel] = "Online" )
 )
+```
+
+```DAX
+Online Share =
+DIVIDE ( CALCULATE ( [Orders], dim_order_profile[order_channel] = "Online" ), [Orders] )
 ```
 
 ```DAX
 Items Sold =
-CALCULATE (
-    SUM ( fact_orders[quantity] ),
-    fact_orders[order_item_is_active] = "Y"
-)
+CALCULATE ( SUM ( fact_orders[quantity] ), dim_order_profile[is_net_sale] = TRUE () )
 ```
 
 ```DAX
@@ -246,11 +190,11 @@ Stores = DISTINCTCOUNT ( fact_orders[store_id] )
 ```
 
 ```DAX
-Average Order Value = DIVIDE ( [Revenue], [Orders] )
+Average Order Value = DIVIDE ( [Revenue], [Completed Orders] )
 ```
 
 ```DAX
-Average Items Per Order = DIVIDE ( [Items Sold], [Orders] )
+Average Items Per Order = DIVIDE ( [Items Sold], [Completed Orders] )
 ```
 
 ```DAX
@@ -269,190 +213,6 @@ Orders Per Customer = DIVIDE ( [Orders], [Customers] )
 Latest Order Timestamp = MAX ( fact_orders[order_timestamp] )
 ```
 
-### Mesures Employés
-
-La relation active `dim_employees[employee_id] 1 → * fact_orders[employee_id]` applique automatiquement le contexte Employé aux mesures commerciales existantes.
-
-```DAX
-Employees with Sales =
-DISTINCTCOUNT ( fact_orders[employee_id] )
-```
-
-```DAX
-Orders per Employee =
-DIVIDE ( [Orders], [Employees with Sales] )
-```
-
-```DAX
-Revenue per Employee =
-DIVIDE ( [Revenue], [Employees with Sales] )
-```
-
-```DAX
-Employee Revenue Rank =
-RANKX (
-    ALLSELECTED ( dim_employees[employee_id] ),
-    [Revenue],
-    ,
-    DESC
-)
-```
-
-```DAX
-Employee Revenue Contribution % =
-DIVIDE (
-    [Revenue],
-    CALCULATE ( [Revenue], ALLSELECTED ( dim_employees ) )
-)
-```
-
-### Mesures de classement
-
-```DAX
-Product Revenue Rank =
-RANKX (
-    ALLSELECTED ( dim_products[product_name] ),
-    [Revenue],
-    ,
-    DESC
-)
-```
-
-```DAX
-Store Revenue Rank =
-RANKX (
-    ALLSELECTED ( dim_stores[store_name] ),
-    [Revenue],
-    ,
-    DESC
-)
-```
-
-```DAX
-Customer Revenue Rank =
-RANKX (
-    ALLSELECTED ( dim_customers[customer_id] ),
-    [Revenue],
-    ,
-    DESC
-)
-```
-
-### Mesures de fidélité
-
-```DAX
-Repeat Customers =
-COUNTROWS (
-    FILTER (
-        VALUES ( fact_orders[customer_id] ),
-        CALCULATE ( DISTINCTCOUNT ( fact_orders[order_id] ) ) > 1
-    )
-)
-```
-
-```DAX
-Repeat Customer Rate = DIVIDE ( [Repeat Customers], [Customers] )
-```
-
-### Mesures panier
-
-```DAX
-Multi Product Orders =
-COUNTROWS (
-    FILTER (
-        VALUES ( fact_orders[order_id] ),
-        CALCULATE ( DISTINCTCOUNT ( fact_orders[product_id] ) ) > 1
-    )
-)
-```
-
-```DAX
-Multi Product Order Rate = DIVIDE ( [Multi Product Orders], [Orders] )
-```
-
----
-
-## 4. Design commun à toutes les pages
-
-### Format
-
-- format de page : `16:9` ;
-- fond : gris très clair ou blanc ;
-- une couleur principale bleu nuit ;
-- une couleur d’accent jaune Power BI ;
-- vert pour les évolutions positives ;
-- rouge uniquement pour les alertes ;
-- maximum six à huit visuels par page.
-
-### Structure
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Titre de la page                          Date de mise à jour │
-├──────────────────────────────────────────────────────────────┤
-│ Slicer Date │ Slicer Store │ Slicer Category │ Reset Filters │
-├───────────┬───────────┬───────────┬───────────┬──────────────┤
-│ KPI 1     │ KPI 2     │ KPI 3     │ KPI 4     │ KPI 5        │
-├───────────────────────────────┬──────────────────────────────┤
-│ Graphique principal           │ Graphique secondaire         │
-├───────────────────────────────┼──────────────────────────────┤
-│ Analyse détaillée             │ Tableau / Top N               │
-└───────────────────────────────┴──────────────────────────────┘
-```
-
-### Navigation
-
-Créer un menu avec des boutons :
-
-```text
-Overview | Trends | Products | Stores | Customers
-Orders | Advanced | Employees | Data Quality
-```
-
-Ajouter sur chaque page :
-
-- un bouton Home ;
-- un bouton Reset filters avec un bookmark ;
-- la date `Latest Order Timestamp` ;
-- des tooltips cohérents ;
-- les mêmes couleurs pour les mêmes dimensions.
-
----
-
-# 5. Pages et visuels à créer
-
-Construire les pages dans l’ordre suivant. Valider une page avant de passer à la suivante.
-
----
-
-## Page 01 — Executive Overview
-
-### Objectif
-
-Répondre en moins de dix secondes à : combien avons-nous vendu, combien de commandes, où et grâce à quoi ?
-
-### Slicers
-
-- `fact_orders[order_date]` ;
-- `dim_stores[store_name]` ;
-- `dim_products[category]` ;
-- `fact_orders[payment_method]`.
-
-### Visuels
-
-| N° | Visuel | Champs | Question métier |
-|---:|---|---|---|
-| 1 | Carte | `[Revenue]` | Quel est le revenu total ? |
-| 2 | Carte | `[Orders]` | Combien de commandes ? |
-| 3 | Carte | `[Items Sold]` | Combien d’articles vendus ? |
-| 4 | Carte | `[Average Order Value]` | Quelle est la valeur moyenne d’une commande ? |
-| 5 | Courbe | Axe `Order Year Month`, valeur `[Revenue]` | Quelle est la tendance du revenu ? |
-| 6 | Barres horizontales | Axe `store_name`, valeur `[Revenue]`, Top 10 | Quels magasins dominent ? |
-| 7 | Treemap | Groupe `category`, détail `brand`, valeur `[Revenue]` | Quel est le mix produit ? |
-| 8 | Donut | Légende `payment_method`, valeur `[Orders]` | Comment les clients paient-ils ? |
-
-### Contrôle
-
 La somme du revenu de tous les magasins doit être égale à la carte Revenue lorsque aucun filtre magasin n’est appliqué.
 
 ---
@@ -467,13 +227,13 @@ Comprendre les tendances, les pics et la saisonnalité.
 
 | N° | Visuel | Axe / catégorie | Valeur | Utilité |
 |---:|---|---|---|---|
-| 1 | Courbe | `order_date` | `[Revenue]` | Tendance journalière |
-| 2 | Colonnes | `Order Year Month` | `[Orders]` | Volume mensuel |
-| 3 | Graphique combiné | `Order Year Month` | Colonnes `[Revenue]`, ligne `[Average Order Value]` | Volume contre valeur |
-| 4 | Colonnes | `Order Day Name` | `[Orders]` | Jours les plus actifs |
-| 5 | Colonnes | `Order Hour` | `[Orders]` | Heures de pointe |
-| 6 | Matrice avec mise en forme conditionnelle | Lignes `Order Day Name`, colonnes `Order Hour` | `[Revenue]` | Heatmap jour × heure |
-| 7 | Aire | `order_date` | `[Items Sold]` | Évolution des quantités |
+| 1 | Courbe | `dim_date[date]` | `[Revenue]` | Tendance journalière |
+| 2 | Colonnes | `dim_date[year_month]` | `[Orders]` | Volume mensuel |
+| 3 | Graphique combiné | `dim_date[year_month]` | Colonnes `[Revenue]`, ligne `[Average Order Value]` | Volume contre valeur |
+| 4 | Colonnes | `dim_date[day_name]` | `[Orders]` | Jours les plus actifs |
+| 5 | Colonnes | `dim_time[hour_label]` | `[Orders]` | Heures de pointe |
+| 6 | Matrice avec mise en forme conditionnelle | Lignes `dim_date[day_name]`, colonnes `dim_time[hour_label]` | `[Revenue]` | Heatmap jour × heure |
+| 7 | Aire | `dim_date[date]` | `[Items Sold]` | Évolution des quantités |
 
 ### Études
 
@@ -507,7 +267,7 @@ Identifier les produits qui génèrent le revenu et ceux qui génèrent le volum
 | 5 | Treemap | Catégorie → Marque → Produit, valeur `[Revenue]` |
 | 6 | Scatter plot | X `[Items Sold]`, Y `[Revenue]`, taille `[Orders]`, détail `product_name` |
 | 7 | Matrice | Lignes Category/Brand/Product, colonnes `[Revenue]`, `[Items Sold]`, `[Average Selling Price]` |
-| 8 | Courbe | Axe `Order Year Month`, légende `category`, valeur `[Revenue]` |
+| 8 | Courbe | Axe `dim_date[year_month]`, légende `category`, valeur `[Revenue]` |
 
 ### Interprétation du scatter plot
 
@@ -537,7 +297,7 @@ Comparer les magasins sans confondre volume, revenu et panier moyen.
 | 5 | Carte géographique | Localisation ville/province/pays, taille `[Revenue]` |
 | 6 | Matrice | Country → Province → City → Store avec Revenue, Orders, AOV |
 | 7 | Colonnes empilées | Axe `store_name`, légende `category`, valeur `[Revenue]` |
-| 8 | Courbe | Axe `Order Year Month`, légende `store_name`, valeur `[Revenue]` |
+| 8 | Courbe | Axe `dim_date[year_month]`, légende `store_name`, valeur `[Revenue]` |
 
 ### Questions métier
 
@@ -568,12 +328,7 @@ Mesurer la valeur, la fréquence et la fidélité des clients.
 | 8 | Matrice | Client → Orders → Revenue → AOV → Items |
 | 9 | Colonnes | Nombre de clients par nombre de commandes |
 
-Créer un nom client si nécessaire :
-
-```DAX
-Customer Full Name =
-dim_customers[customer_first_name] & " " & dim_customers[customer_last_name]
-```
+Utiliser directement `dim_customer[customer_full_name]` pour afficher le nom du client.
 
 ### Études avancées
 
@@ -598,9 +353,9 @@ Comprendre la composition et le comportement des commandes.
 |---:|---|---|
 | 1 | Carte | `[Average Items Per Order]` |
 | 2 | Carte | `[Multi Product Order Rate]` |
-| 3 | Donut | `payment_method` par `[Orders]` |
-| 4 | Barres | `payment_method` par `[Average Order Value]` |
-| 5 | Colonnes | `order_status` par `[Orders]` |
+| 3 | Donut | `dim_order_profile[payment_label]` par `[Orders]` |
+| 4 | Barres | `dim_order_profile[payment_label]` par `[Average Order Value]` |
+| 5 | Colonnes | `dim_order_profile[status_label]` par `[Orders]` |
 | 6 | Histogramme | Montant de commande par groupes de valeurs |
 | 7 | Histogramme | Nombre d’articles par commande |
 | 8 | Matrice | Store × Payment Method avec Orders et Revenue |
@@ -657,7 +412,7 @@ Store Country
 
 ### Visuel 4 — Matrice Month × Store
 
-- lignes : `Order Year Month` ;
+- lignes : `dim_date[year_month]` ;
 - colonnes : magasin ;
 - valeur : `[Revenue]`.
 
@@ -710,22 +465,11 @@ Analyser la contribution attribuée, la charge commerciale et le panier moyen de
 
 Avant de construire la page :
 
-1. filtrer `dim_employees` sur `dbt_valid_to = 31/12/9999` dans Power Query ;
-2. vérifier que `employee_id` est unique et sans valeur vide ;
-3. créer la relation active `dim_employees[employee_id] 1 → * fact_orders[employee_id]` ;
-4. utiliser un filtrage à sens unique de la dimension vers le fact ;
-5. ne pas appliquer de filtre spécial excluant l’historique.
+1. vérifier la relation active `dim_employee[employee_id] 1 → * fact_orders[employee_id]` (aucun filtre : une ligne par employé) ;
+2. utiliser un filtrage à sens unique de la dimension vers le fait ;
+3. utiliser `dim_employee[role_group]` pour séparer caisses et commandes en ligne.
 
-Créer une colonne d’affichage :
-
-```DAX
-Employee Name =
-TRIM (
-    dim_employees[employee_first_name]
-        & " "
-        & dim_employees[employee_last_name]
-)
-```
+Utiliser `dim_employee[employee_full_name]` comme nom d'affichage (`Employee Name` dans les visuels ci-dessous).
 
 ### Visuels
 
@@ -739,7 +483,7 @@ TRIM (
 | 6 | Barres Top 15 | `Employee Name` par `[Revenue]` | Qui génère le plus de revenu ? |
 | 7 | Barres | `job_title` par `[Revenue]` et `[Orders]` | Quels rôles contribuent le plus ? |
 | 8 | Scatter plot | X `[Orders]`, Y `[Revenue]`, taille `[Average Order Value]`, détail `Employee Name` | Volume, valeur et panier sont-ils équilibrés ? |
-| 9 | Courbe | `order_date` par `[Revenue]`, légende Top 5 `Employee Name` | Comment évoluent les meilleurs employés ? |
+| 9 | Courbe | `dim_date[date]` par `[Revenue]`, légende Top 5 `Employee Name` | Comment évoluent les meilleurs employés ? |
 | 10 | Matrice | Store → Employee avec Orders, Revenue, AOV et Rank | Comment la performance se répartit-elle dans les magasins ? |
 | 11 | Heatmap | `Employee Name` × `category` avec `[Revenue]` | Quelles sont les spécialités produit ? |
 | 12 | Matrice | `store_name` → `Employee Name`, colonnes `[Orders]`, `[Revenue]` et `[Average Order Value]` | La charge est-elle équilibrée dans chaque magasin ? |
@@ -779,13 +523,13 @@ Employee Completeness % =
 
 ```DAX
 Employee Dimension Blank Keys =
-COUNTBLANK ( dim_employees[employee_id] )
+COUNTBLANK ( dim_employee[employee_id] )
 ```
 
 ```DAX
 Employee Dimension Duplicate Keys =
 COUNTROWS ( dim_employees )
-    - DISTINCTCOUNT ( dim_employees[employee_id] )
+    - DISTINCTCOUNT ( dim_employee[employee_id] )
 ```
 
 ```DAX
@@ -794,7 +538,7 @@ COUNTROWS (
     FILTER (
         fact_orders,
         NOT ISBLANK ( fact_orders[employee_id] )
-            && ISBLANK ( RELATED ( dim_employees[employee_id] ) )
+            && ISBLANK ( RELATED ( dim_employee[employee_id] ) )
     )
 )
 ```
@@ -804,7 +548,7 @@ Employee Store Mismatch Rows =
 COUNTROWS (
     FILTER (
         fact_orders,
-        fact_orders[store_id] <> RELATED ( dim_employees[store_id] )
+        fact_orders[store_id] <> RELATED ( dim_employee[employee_store_id] )
     )
 )
 ```
@@ -837,7 +581,7 @@ Duplicate Order Item Check =
 - quantité, prix et montant doivent être positifs ;
 - la somme de `sales_amount` par commande doit correspondre au total de commande ;
 - `employee_id` doit être renseigné pour chaque commande historique et nouvelle ;
-- chaque `employee_id` du fact doit exister dans `dim_employees` ;
+- chaque `employee_id` du fact doit exister dans `dim_employee` ;
 - l’employé et la commande doivent appartenir au même `store_id` ;
 - la dimension Employés courante doit contenir une seule ligne par `employee_id`.
 
@@ -917,7 +661,7 @@ Synchroniser les slicers Date, Store et Category entre les pages 01 à 08. Garde
 
 ### Étape 1 — Modèle
 
-- filtrer chaque dimension SCD2 sur sa version courante (`dbt_valid_to = 31/12/9999`) ;
+- charger le fait et les sept dimensions (une ligne par clé, aucun filtre de version) ;
 - vérifier l’unicité et l’absence de `null` sur chaque clé du côté `1` ;
 - vérifier toutes les cardinalités ;
 - désactiver les relations ambiguës ;
@@ -951,7 +695,7 @@ Trends → Products → Stores → Customers → Orders → Advanced
 
 ### Étape 5 — Page Employés
 
-- vérifier la relation active `dim_employees 1 → * fact_orders` ;
+- vérifier la relation active `dim_employee 1 → * fact_orders` ;
 - vérifier `Employee Completeness % = 100 %` ;
 - vérifier `Employee Store Mismatch Rows = 0` ;
 - construire les visuels sur tout le dataset ;

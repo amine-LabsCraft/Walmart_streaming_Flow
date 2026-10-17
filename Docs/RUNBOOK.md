@@ -198,7 +198,53 @@ uv run airflow/walmart_dbt/tools/restore_source_from_bronze.py --apply    # écr
 
 L'outil lit `DATABRICKS_*` dans `airflow/.env`, vide les tables `raw`, recopie `walmart.bronze_local`, puis repositionne la séquence `change_version`.
 
+Pour un environnement neuf sans `bronze_local`, la base est initialisée à partir des CSV (données Faker). Appliquez alors les règles métier avant de générer des commandes :
+
+```powershell
+uv run "Walmart Data Engineering/Walmart dataset/realign_business_data.py" --apply
+```
+
 ---
+
+## Protections automatiques du pipeline
+
+| Risque | Protection | Où |
+|---|---|---|
+| Deux runs en même temps (run horaire + déclenchement manuel) écrivent les mêmes tables et le même dossier `target` | `max_active_runs=1` : le run manuel attend (« queued ») la fin du run en cours | `orchestration.py` |
+| Coupure réseau avec Databricks : requête terminée côté serveur, mais client bloqué | Délai réseau de 120 s par appel et 5 tentatives au maximum, au lieu de 600 à 900 s et 30 tentatives | `profiles.yml` (`connection_parameters`), `walmart_ingestion.py` |
+| Tâche bloquée ou perdue | `execution_timeout` de 20 min par tâche, puis **2 nouvelles tentatives automatiques** (2 min, puis 4 min) | `orchestration.py` (`DEFAULT_ARGS`) |
+| Run qui déborde sur l'heure suivante | `dagrun_timeout` de 55 min | `orchestration.py` |
+| Worker recréé pendant une tâche (`docker compose up` après un changement de configuration) | Arrêt progressif Celery : le worker termine sa tâche (jusqu'à 15 min, `stop_grace_period`) avant de s'arrêter. Sinon, la tâche est relancée par les nouvelles tentatives | `docker-compose.yaml` |
+| PC en veille (veille moderne Windows) pendant un run | Order Pulse empêche la mise en veille automatique tant que la génération tourne. Sinon, au réveil, Airflow détecte la tâche sans heartbeat, l'arrête puis la **relance automatiquement** | `continuous_order_generator.py` (`keep_system_awake`), `orchestration.py` |
+| Ligne validée en retard (sa transaction se termine après une plus récente) : le watermark l'aurait dépassée | Fenêtre de recouvrement : 1 000 versions / 10 min relues à chaque run, sans doublon grâce au `MERGE` | `walmart_ingestion.py`, macro dbt `incremental_cdc_filter` |
+| Base source recréée (volume supprimé) : séquence et identifiants repartent en arrière | `ingest_cdc` échoue immédiatement (`SourceResetError`, sans nouvelle tentative) avant toute écriture | `walmart_ingestion.py`, `orchestration.py` |
+| Reconstruction de l'image avec des versions plus récentes et incompatibles | Toutes les dépendances Python de l'image Airflow sont figées | `airflow/requirements.txt` |
+| SQL Warehouse jamais arrêté à cause du monitoring | Résultat Gold mis en cache 15 min dans l'exporter | `WALMART_GOLD_CACHE_SECONDS` |
+
+Toutes les tâches sont idempotentes (`MERGE` sur la clé primaire, snapshots basés sur `updated_at`) : une nouvelle tentative ne crée jamais de doublon.
+
+> **Code de sortie `-15` (SIGTERM)** : la tâche a été arrêtée de l'extérieur, et la cause est dans les dernières lignes du log de la tâche. Causes possibles :
+> - délai dépassé ;
+> - tâche sans heartbeat ;
+> - worker arrêté ;
+> - run marqué en échec.
+>
+> Cas observé le 16/10/2026 : la **veille moderne de Windows** (journal Système, Kernel-Power 506/507) a coupé le réseau et gelé Docker pendant 18 à 44 minutes. La requête Databricks s'était terminée côté serveur, mais la réponse n'est jamais arrivée au conteneur. Au réveil, le scheduler a signalé `Detected a task instance without a heartbeat` et arrêté la tâche. La nouvelle tentative a réussi sans intervention.
+
+### Garder le PC éveillé pendant le pipeline
+
+Le pipeline tourne dans Docker sur ton PC : s'il dort, le pipeline dort aussi.
+
+- Pendant la génération, Order Pulse demande à Windows de rester éveillé (fermer le capot ou le bouton d'alimentation restent prioritaires).
+- Le DAG horaire tourne aussi quand le générateur est arrêté. Pour qu'il ne soit pas interrompu, choisis dans **Paramètres → Système → Alimentation → Écran, veille et mise en veille prolongée** la valeur « Jamais » pour la mise en veille sur secteur, pendant les sessions de travail.
+- Un run interrompu par la veille reprend automatiquement au réveil : aucune action manuelle n'est nécessaire.
+- Sans modifier les paramètres Windows, gardez une fenêtre ouverte avec le script fourni (aucun droit administrateur, la demande s'arrête avec Ctrl+C) :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File airflow/tools/keep_awake.ps1
+```
+
+> Ne modifiez pas les fichiers dbt pendant qu'un run est en cours : le projet est monté en direct dans les conteneurs, un run en cours lirait un mélange de l'ancienne et de la nouvelle version.
 
 ## Dépannage
 
@@ -209,4 +255,8 @@ L'outil lit `DATABRICKS_*` dans `airflow/.env`, vide les tables `raw`, recopie `
 | Un test dbt échoue | Ouvrez le log de la tâche dans Airflow ; les échecs de relations sont stockés dans `walmart.dbt_test__audit` |
 | Générateur `DOWN` dans Prometheus | Le terminal 2 doit être ouvert ; vérifiez `airflow/monitoring/runtime/generator-targets.json` |
 | Un conteneur n'est pas sain | `docker compose -f airflow/docker-compose.yaml logs --tail 100 <service>` |
+| Tâche en échec avec `exit code -15` | Lire la fin du log et le log du scheduler (`without a heartbeat` = PC en veille ou worker arrêté ; sinon délai `execution_timeout` dépassé). Les nouvelles tentatives relancent la tâche automatiquement : vérifier que le run finit en succès avant toute action. |
+| Erreur Power BI « cyclic reference » | Voir [POWER_BI.md](POWER_BI.md#actualisation-fiable) : désactiver la date/heure automatique, actualiser après le succès du DAG, réessayer. |
+| `ingest_cdc` en échec avec `SourceResetError` | La base source a été recréée. Rien n'a été écrit dans le bronze. Arrêtez le générateur et suivez [Réinitialiser la base source](#réinitialiser-la-base-source), puis relancez le DAG. |
+| Un run manuel reste en « queued » | Normal : un run est déjà en cours (`max_active_runs=1`). Il démarre dès la fin du précédent. |
 | Parsing dbt | `docker compose -f airflow/docker-compose.yaml exec airflow-worker dbt parse --project-dir /opt/airflow/walmart_dbt --profiles-dir /opt/airflow/walmart_dbt` |

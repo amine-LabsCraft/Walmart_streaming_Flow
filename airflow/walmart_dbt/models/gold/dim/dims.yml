@@ -1,0 +1,55 @@
+version: 2
+
+# Star-schema dimensions: one row per key, consumed by fact_orders.
+
+models:
+  - name: dim_customer
+    description: Clients, version courante (historique dans snapshots.customers_snapshot).
+    columns:
+      - name: customer_id
+        data_tests: [not_null, unique]
+
+  - name: dim_product
+    description: Produits, version courante avec le prix actuel.
+    columns:
+      - name: product_id
+        data_tests: [not_null, unique]
+      - name: category
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Grocery", "Home", "Clothing", "Electronics", "Sports", "Toys"]
+
+  - name: dim_store
+    description: Supercentres, version courante.
+    columns:
+      - name: store_id
+        data_tests: [not_null, unique]
+
+  - name: dim_employee
+    description: Employés et rôles, version courante.
+    columns:
+      - name: employee_id
+        data_tests: [not_null, unique]
+
+  - name: dim_date
+    description: Calendrier (jour), libellés français, fériés et événements commerciaux.
+    columns:
+      - name: date_key
+        data_tests: [not_null, unique]
+      - name: date
+        data_tests: [not_null, unique]
+
+  - name: dim_time
+    description: Heure locale du magasin (24 lignes), tranches de la journée.
+    columns:
+      - name: time_key
+        data_tests: [not_null, unique]
+
+  - name: dim_order_profile
+    description: >-
+      Dimension « junk » : canal, moyen de paiement et statut de la commande.
+      is_net_sale indique les commandes qui comptent dans le revenu net.
+    columns:
+      - name: order_profile_key
+        data_tests: [not_null, unique]

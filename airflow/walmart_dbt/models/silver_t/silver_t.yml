@@ -378,14 +378,22 @@ models:
           - not_null
 
       - name: payment_method
-        description: Moyen de paiement utilisé.
+        description: Moyen de paiement ; Online pour les commandes web.
         data_tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["Debit Card", "Credit Card", "Cash", "Gift Card", "Online"]
 
       - name: order_status
-        description: Statut de la commande.
+        description: >-
+          Cycle de vie : Completed (payée), Pending (web en préparation),
+          Cancelled (web annulée), Returned (retournée).
         data_tests:
           - not_null
+          - accepted_values:
+              arguments:
+                values: ["Completed", "Pending", "Cancelled", "Returned"]
 
       - name: total_amount
         description: Montant total de la commande.

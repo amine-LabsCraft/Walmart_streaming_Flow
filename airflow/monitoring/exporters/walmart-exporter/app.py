@@ -6,6 +6,7 @@ import logging
 import os
 import threading
 import time
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -50,6 +51,11 @@ class CachedCollector:
         self._cache_seconds = float(
             os.getenv("WALMART_EXPORTER_CACHE_SECONDS", "30")
         )
+        # Gold is rebuilt once an hour. Querying it on every scrape would keep
+        # the Databricks SQL warehouse awake (and billed) around the clock.
+        self._gold_cache_seconds = float(
+            os.getenv("WALMART_GOLD_CACHE_SECONDS", "900")
+        )
         self._lock = threading.Lock()
         self._cache: dict[str, CacheEntry] = {}
 
@@ -57,11 +63,14 @@ class CachedCollector:
         self,
         name: str,
         loader: Callable[[], dict[str, float]],
+        max_age: float | None = None,
     ) -> dict[str, float]:
+        if max_age is None:
+            max_age = self._cache_seconds
         with self._lock:
             cached = self._cache.get(name)
             now = time.monotonic()
-            if cached and now - cached.collected_at < self._cache_seconds:
+            if cached and now - cached.collected_at < max_age:
                 return cached.values
 
         values = loader()
@@ -76,7 +85,7 @@ class CachedCollector:
 
         started = time.monotonic()
         try:
-            with psycopg2.connect(dsn, connect_timeout=5) as connection:
+            with closing(psycopg2.connect(dsn, connect_timeout=5)) as connection:
                 connection.set_session(readonly=True, autocommit=True)
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -154,7 +163,7 @@ class CachedCollector:
             return {"up": 0.0}
 
         try:
-            with psycopg2.connect(dsn, connect_timeout=5) as connection:
+            with closing(psycopg2.connect(dsn, connect_timeout=5)) as connection:
                 connection.set_session(readonly=True, autocommit=True)
                 with connection.cursor() as cursor:
                     cursor.execute(
@@ -313,7 +322,7 @@ class CachedCollector:
         yield self.gauge("walmart_airflow_last_failure_timestamp_seconds", "Last failed orchestrate DAG run.", airflow.get("last_failure", 0.0))
         yield self.gauge("walmart_airflow_running_dag_runs", "Currently running orchestrate DAG runs.", airflow.get("running", 0.0))
 
-        gold = self._cached("gold", self._gold_values)
+        gold = self._cached("gold", self._gold_values, self._gold_cache_seconds)
         yield self.gauge("walmart_gold_monitoring_enabled", "Whether Databricks SQL monitoring is enabled.", gold.get("enabled", 0.0))
         if gold.get("enabled", 0.0):
             yield self.gauge("walmart_gold_up", "Databricks Gold query status.", gold.get("up", 0.0))

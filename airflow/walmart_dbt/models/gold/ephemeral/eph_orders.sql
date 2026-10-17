@@ -1,33 +1,16 @@
-WITH order_grain AS (
-    SELECT
-        order_id,
-        order_item_id,
-        payment_method,
-        order_status,
-        order_timestamp,
-        order_created_timestamp,
-        order_updated_timestamp,
-        order_is_active,
-        order_processed_at,
-        obt_b_processed_at,
-        ROW_NUMBER() OVER (
-            PARTITION BY order_id
-            ORDER BY order_item_id
-        ) AS order_item_rank
-    FROM {{ ref('obt_b') }}
-)
-
+-- One row per order header, read from Silver: source of the order
+-- lifecycle history (orders_snapshot).
 SELECT
     order_id,
-    order_item_id,
+    customer_id,
+    store_id,
+    employee_id,
+    order_timestamp,
     payment_method,
     order_status,
-    order_timestamp,
-    order_created_timestamp,
-    order_updated_timestamp,
-    order_is_active,
-    order_processed_at,
-    obt_b_processed_at,
-    CURRENT_TIMESTAMP() AS order_gold_processed_at
-FROM order_grain
-WHERE order_item_rank = 1
+    total_amount,
+    created_timestamp AS order_created_timestamp,
+    updated_timestamp AS order_updated_timestamp,
+    is_active AS order_is_active,
+    processed_at AS order_processed_at
+FROM {{ ref('orders_t') }}

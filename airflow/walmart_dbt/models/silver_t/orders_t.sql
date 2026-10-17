@@ -13,11 +13,5 @@ SELECT
 FROM {{ source('walmart_databricks', 'orders') }} AS source_data
 
 {% if is_incremental() %}
-WHERE source_data.change_version > (
-    SELECT COALESCE(
-        MAX(target_data.change_version),
-        0
-    )
-    FROM {{ this }} AS target_data
-)
+{{ incremental_cdc_filter('change_version') }}
 {% endif %}
