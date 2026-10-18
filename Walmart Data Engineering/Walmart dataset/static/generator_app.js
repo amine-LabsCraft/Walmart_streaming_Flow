@@ -269,6 +269,35 @@ function renderSignupPreview(customer) {
   lastSignupPreview.hidden = false;
 }
 
+// Visual only: between two status polls the ring fills smoothly and the
+// seconds count down from a local deadline; each poll re-syncs it.
+const ringState = { running: false, interval: 1, deadline: 0, frame: 0 };
+
+function drawCountdownRing() {
+  const remaining = ringState.running
+    ? Math.max(0, (ringState.deadline - performance.now()) / 1000)
+    : ringState.interval;
+  const filled = ringState.running ? 1 - remaining / ringState.interval : 0;
+
+  pulseOrbit.style.setProperty("--progress", Math.min(1, Math.max(0, filled)).toFixed(4));
+  pulseOrbit.classList.toggle("ending", ringState.running && remaining <= 3);
+  countdown.textContent = ringState.running ? Math.ceil(remaining) : ringState.interval;
+
+  ringState.frame = ringState.running ? window.requestAnimationFrame(drawCountdownRing) : 0;
+}
+
+function renderCountdownRing(status) {
+  ringState.interval = Number(status.interval_seconds) || 1;
+  ringState.running = status.mode === "running";
+  if (ringState.running) {
+    const remaining = Number(status.seconds_until_next ?? ringState.interval);
+    ringState.deadline = performance.now() + Math.max(0, remaining) * 1000;
+  }
+  if (!ringState.frame) {
+    drawCountdownRing();
+  }
+}
+
 function renderStatus(status) {
   const copy = STATUS_COPY[status.mode] || STATUS_COPY.idle;
   const active = ["starting", "running", "stopping"].includes(status.mode);
@@ -306,6 +335,7 @@ function renderStatus(status) {
   countdown.textContent = status.mode === "running"
     ? Math.max(0, Math.ceil(status.seconds_until_next ?? status.interval_seconds))
     : status.interval_seconds;
+  renderCountdownRing(status);
 
   if (status.last_error) {
     setFeedback(generatorFeedback, "Erreur PostgreSQL : " + status.last_error, "error");
