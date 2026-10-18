@@ -512,6 +512,10 @@ h1 {
 }
 
 .countdown-ring {
+  --progress: 0;
+  --ring-color: var(--blue);
+  --ring-track: #e3ecf8;
+  position: relative;
   display: grid;
   width: 68px;
   height: 68px;
@@ -519,11 +523,33 @@ h1 {
   color: var(--blue-dark);
   text-align: center;
   background: white;
-  border: 5px solid #d5e4fa;
   border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(13, 79, 179, .08);
+  transition: box-shadow .3s ease;
 }
 
-.countdown-ring.active { animation: ring-pulse 1.8s ease-in-out infinite; }
+/* Progress arc: starts at 12 o'clock and fills clockwise. */
+.countdown-ring::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: conic-gradient(
+    var(--ring-color) calc(var(--progress) * 360deg),
+    var(--ring-track) 0
+  );
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5.5px));
+}
+
+.countdown-ring > * { position: relative; }
+
+.countdown-ring.active {
+  --ring-color: var(--blue);
+  box-shadow: 0 0 0 4px rgba(22, 98, 212, .08), 0 2px 8px rgba(13, 79, 179, .12);
+}
+
+.countdown-ring.active.ending { --ring-color: var(--yellow); }
 
 .countdown-ring strong {
   font: 700 24px/1 Bahnschrift, sans-serif;
@@ -1085,13 +1111,6 @@ button[aria-busy="true"] { cursor: progress; }
   color: var(--green);
   content: "✓";
   font-weight: 800;
-}
-
-@keyframes ring-pulse {
-  50% {
-    border-color: #9ac0f5;
-    box-shadow: 0 0 0 5px rgba(22, 98, 212, .08);
-  }
 }
 
 @keyframes row-in {
